@@ -1,0 +1,11 @@
+{
+  "extends": "../packages/config/tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["e2e/**/*.ts", "../playwright.config.ts"],
+  "exclude": ["../node_modules"]
+}

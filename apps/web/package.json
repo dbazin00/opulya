@@ -1,0 +1,31 @@
+{
+  "name": "@opulya/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opulya/shared": "0.0.0",
+    "@radix-ui/react-dialog": "1.1.23",
+    "@radix-ui/react-select": "2.3.7",
+    "@tailwindcss/postcss": "4.3.3",
+    "@tanstack/react-query": "5.104.0",
+    "dotenv": "17.4.2",
+    "lucide-react": "0.577.0",
+    "next": "16.3.8",
+    "next-intl": "4.14.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "recharts": "3.10.1",
+    "tailwindcss": "4.3.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0"
+  }
+}

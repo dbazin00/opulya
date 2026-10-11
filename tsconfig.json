@@ -1,0 +1,13 @@
+{
+  "extends": "./packages/config/tsconfig.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["*.ts"],
+  "exclude": ["node_modules"]
+}

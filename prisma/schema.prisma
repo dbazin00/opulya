@@ -1,0 +1,285 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../apps/api/src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AccountType {
+  CASH
+  BANK
+  INVESTMENT
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  ADJUSTMENT
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+enum InvestmentType {
+  BUY
+  SELL
+  DIVIDEND
+  FEE
+  DEPOSIT
+  WITHDRAWAL
+}
+
+enum AssetType {
+  STOCK
+  ETF
+  CRYPTO
+  FUND
+  OTHER
+}
+
+enum PriceKind {
+  CLOSE
+  QUOTE
+}
+
+model User {
+  id                         String                  @id @default(cuid())
+  firstName                  String
+  lastName                   String
+  email                      String                  @unique
+  passwordHash               String?
+  emailVerifiedAt            DateTime?               @db.Timestamptz(6)
+  emailVerificationTokenHash String?                 @unique
+  emailVerificationExpiresAt DateTime?               @db.Timestamptz(6)
+  emailVerificationSentAt    DateTime?               @db.Timestamptz(6)
+  locale                     String                  @default("en")
+  timeZone                   String                  @default("Europe/Zagreb")
+  ledgerVersion              Int                     @default(0)
+  createdAt                  DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt                  DateTime                @updatedAt @db.Timestamptz(6)
+  sessions                   Session[]
+  accounts                   Account[]
+  categories                 Category[]
+  transactions               Transaction[]
+  assets                     Asset[]
+  investments                InvestmentTransaction[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  expiresAt  DateTime @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  lastSeenAt DateTime @default(now()) @db.Timestamptz(6)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([lastSeenAt])
+}
+
+model Account {
+  id             String                  @id @default(cuid())
+  userId         String
+  name           String
+  type           AccountType
+  currency       String                  @db.VarChar(3)
+  initialBalance Decimal                 @db.Decimal(24, 8)
+  createdAt      DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime                @updatedAt @db.Timestamptz(6)
+  archivedAt     DateTime?               @db.Timestamptz(6)
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  outgoing       Transaction[]           @relation("SourceAccount")
+  incoming       Transaction[]           @relation("DestinationAccount")
+  investments    InvestmentTransaction[]
+
+  @@unique([id, userId])
+  @@index([userId, archivedAt])
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  userId       String
+  type         CategoryType
+  name         String?
+  defaultKey   String?
+  parentId     String?
+  createdAt    DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(6)
+  archivedAt   DateTime?     @db.Timestamptz(6)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  parent       Category?     @relation("CategoryTree", fields: [parentId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+  children     Category[]    @relation("CategoryTree")
+  transactions Transaction[]
+
+  @@unique([id, userId])
+  @@unique([userId, type, defaultKey])
+  @@index([userId, parentId])
+  @@index([userId, archivedAt])
+}
+
+model Transaction {
+  id                      String                 @id @default(cuid())
+  userId                  String
+  type                    TransactionType
+  sourceAccountId         String?
+  destinationAccountId    String?
+  amount                  Decimal                @db.Decimal(24, 8)
+  currency                String                 @db.VarChar(3)
+  categoryId              String?
+  description             String?
+  visibleInHistory        Boolean                @default(true)
+  isOpeningBalance        Boolean                @default(false)
+  sourceBalanceAfter      Decimal?               @db.Decimal(48, 8)
+  destinationBalanceAfter Decimal?               @db.Decimal(48, 8)
+  occurredAt              DateTime               @db.Timestamptz(6)
+  ledgerOrderAt           DateTime?              @db.Timestamptz(6)
+  createdAt               DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime               @updatedAt @db.Timestamptz(6)
+  voidedAt                DateTime?              @db.Timestamptz(6)
+  replacesId              String?                @unique
+  clientRequestId         String
+  user                    User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  sourceAccount           Account?               @relation("SourceAccount", fields: [sourceAccountId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+  destinationAccount      Account?               @relation("DestinationAccount", fields: [destinationAccountId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+  category                Category?              @relation(fields: [categoryId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+  replaces                Transaction?           @relation("Corrections", fields: [replacesId], references: [id], onDelete: Restrict)
+  replacement             Transaction?           @relation("Corrections")
+  investmentActivity      InvestmentTransaction? @relation("InvestmentFunding")
+
+  @@unique([id, userId])
+  @@unique([userId, clientRequestId])
+  @@index([userId, occurredAt])
+  @@index([sourceAccountId, occurredAt])
+  @@index([destinationAccountId, occurredAt])
+  @@index([categoryId])
+}
+
+model Asset {
+  id                   String                  @id @default(cuid())
+  userId               String
+  symbol               String
+  name                 String
+  assetType            AssetType
+  exchange             String                  @default("")
+  currency             String                  @db.VarChar(3)
+  marketDataIdentifier String?
+  instrumentId         String?
+  createdAt            DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime                @updatedAt @db.Timestamptz(6)
+  user                 User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  transactions         InvestmentTransaction[]
+  instrument           Instrument?             @relation(fields: [instrumentId], references: [id], onDelete: Restrict)
+
+  @@unique([id, userId])
+  @@unique([userId, symbol, exchange, currency])
+}
+
+model Instrument {
+  id          String              @id @default(cuid())
+  name        String
+  symbol      String
+  assetType   AssetType
+  exchange    String
+  mic         String              @default("")
+  currency    String              @db.VarChar(3)
+  timeZone    String              @default("UTC")
+  isin        String?
+  identity    String              @unique
+  createdAt   DateTime            @default(now()) @db.Timestamptz(6)
+  assets      Asset[]
+  mappings    InstrumentMapping[]
+  latestPrice LatestPrice?
+
+  @@index([symbol])
+}
+
+model InstrumentMapping {
+  id                 String     @id @default(cuid())
+  instrumentId       String
+  provider           String
+  symbol             String
+  exchange           String
+  mic                String     @default("")
+  currency           String     @db.VarChar(3)
+  lastAttemptAt      DateTime?  @db.Timestamptz(6)
+  lastSuccessAt      DateTime?  @db.Timestamptz(6)
+  error              String?
+  currentRequestedAt DateTime?  @db.Timestamptz(6)
+  instrument         Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@unique([instrumentId, provider])
+  @@unique([provider, symbol, exchange, mic, currency])
+}
+
+model LatestPrice {
+  instrumentId String     @id
+  tradingDate  DateTime   @db.Date
+  availableAt  DateTime   @db.Timestamptz(6)
+  price        Decimal    @db.Decimal(24, 8)
+  currency     String     @db.VarChar(3)
+  provider     String
+  fetchedAt    DateTime   @db.Timestamptz(6)
+  kind         PriceKind  @default(CLOSE)
+  marketAt     DateTime?  @db.Timestamptz(6)
+  instrument   Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+}
+
+model MarketQuota {
+  key   String @id
+  count Int    @default(0)
+}
+
+model MarketJob {
+  id         String   @id
+  token      String?
+  leaseUntil DateTime @db.Timestamptz(6)
+}
+
+model InstrumentDirectoryCache {
+  id        String   @id
+  version   Int
+  payload   Bytes
+  fetchedAt DateTime @db.Timestamptz(6)
+}
+
+model InvestmentTransaction {
+  id                   String                 @id @default(cuid())
+  userId               String
+  accountId            String
+  assetId              String?
+  type                 InvestmentType
+  quantity             Decimal?               @db.Decimal(28, 12)
+  pricePerUnit         Decimal?               @db.Decimal(24, 8)
+  totalAmount          Decimal                @db.Decimal(24, 8)
+  fee                  Decimal                @default(0) @db.Decimal(24, 8)
+  balanceAfter         Decimal?               @db.Decimal(48, 8)
+  currency             String                 @db.VarChar(3)
+  executedAt           DateTime               @db.Timestamptz(6)
+  ledgerOrderAt        DateTime?              @db.Timestamptz(6)
+  createdAt            DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime               @updatedAt @db.Timestamptz(6)
+  voidedAt             DateTime?              @db.Timestamptz(6)
+  clientRequestId      String
+  fundingTransactionId String?
+  replacesId           String?
+  user                 User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  account              Account                @relation(fields: [accountId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+  asset                Asset?                 @relation(fields: [assetId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+  fundingTransaction   Transaction?           @relation("InvestmentFunding", fields: [fundingTransactionId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+  replaces             InvestmentTransaction? @relation("InvestmentCorrections", fields: [replacesId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+  replacement          InvestmentTransaction? @relation("InvestmentCorrections")
+
+  @@unique([id, userId])
+  @@unique([replacesId, userId])
+  @@unique([fundingTransactionId, userId])
+  @@unique([userId, clientRequestId])
+  @@index([userId, accountId, executedAt])
+  @@index([assetId])
+}

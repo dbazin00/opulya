@@ -1,0 +1,91 @@
+"use client";
+import { Dropdown } from "./dropdown";
+import { useState, type SubmitEvent } from "react";
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { Button, ErrorNotice, Field } from "./ui";
+import { useUser } from "./providers";
+import { LanguageSelect } from "./language-select";
+export function SettingsView() {
+  const t = useTranslations();
+  const user = useUser();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const [saved, setSaved] = useState(false);
+  async function submit(e: SubmitEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setSaved(false);
+    const data = Object.fromEntries(new FormData(e.currentTarget));
+    try {
+      await api("auth/settings", data, "PATCH");
+      document.cookie = `OPULYA_LOCALE=${data.locale}; Path=/; SameSite=Lax; Max-Age=31536000`;
+      router.refresh();
+      setSaved(true);
+    } catch (error) {
+      setError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="settings-layout">
+      <section className="section">
+        <h2>{t("settings.profile")}</h2>
+        <dl className="profile-list">
+          <dt>{t("auth.firstName")}</dt>
+          <dd>{user.firstName}</dd>
+          <dt>{t("auth.lastName")}</dt>
+          <dd>{user.lastName}</dd>
+          <dt>{t("auth.email")}</dt>
+          <dd>{user.email}</dd>
+        </dl>
+      </section>
+      <section className="section">
+        <h2>{t("settings.preferences")}</h2>
+        <form className="entry-form" onSubmit={submit}>
+          <Field label={t("settings.locale")}>
+            {(id) => (
+              <LanguageSelect
+                id={id}
+                label={t("settings.locale")}
+                name="locale"
+                defaultValue={user.locale}
+                disabled={busy}
+              />
+            )}
+          </Field>
+          <Field label={t("common.timeZone")} hint={t("settings.timezoneHint")}>
+            {(id) => (
+              <Dropdown id={id} name="timeZone" defaultValue={user.timeZone}>
+                {[
+                  ...new Set([
+                    user.timeZone,
+                    "UTC",
+                    ...Intl.supportedValuesOf("timeZone"),
+                  ]),
+                ].map((zone) => (
+                  <option key={zone}>{zone}</option>
+                ))}
+              </Dropdown>
+            )}
+          </Field>
+          <ErrorNotice error={error} />
+          {saved && (
+            <p role="status" className="positive">
+              {t("settings.saved")}
+            </p>
+          )}
+          <div className="form-footer">
+            <Button type="submit" busy={busy}>
+              {t("common.save")}
+            </Button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}

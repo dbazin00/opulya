@@ -1,0 +1,54 @@
+{
+  "name": "opulya",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@10.9.8",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0",
+    "npm": ">=10.9.0"
+  },
+  "scripts": {
+    "dev": "npm run build --workspace @opulya/shared && concurrently -k -n api,web \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "tsx watch --tsconfig apps/api/tsconfig.json apps/api/src/main.ts",
+    "dev:web": "npm run dev --workspace @opulya/web",
+    "build": "npm run db:generate && npm run build --workspace @opulya/shared && npm run build --workspace @opulya/api && npm run build --workspace @opulya/web",
+    "typecheck": "npm run build --workspace @opulya/shared && npm run typecheck --workspaces --if-present && npm run typecheck:e2e && npm run typecheck:tooling",
+    "typecheck:e2e": "tsc --project tests/tsconfig.json",
+    "typecheck:tooling": "tsc --project tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:integration": "tsx --tsconfig apps/api/tsconfig.typecheck.json --test --test-concurrency=1 apps/api/test/integration.test.ts apps/api/test/market.test.ts apps/api/test/auth-throttle.test.ts apps/api/test/balance-snapshots.test.ts apps/api/test/category-lifecycle.test.ts apps/api/test/account-lifecycle.test.ts apps/api/test/asset-library.test.ts apps/api/test/instrument-directory.test.ts apps/api/test/investment-corrections.test.ts apps/api/test/email-verification.test.ts apps/api/test/migrations.test.ts",
+    "test:e2e": "playwright test",
+    "db:generate": "prisma generate",
+    "db:backfill-balances": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/backfill-balance-snapshots.ts",
+    "db:migrate": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "mail:check": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/check-mail.ts",
+    "market:sync": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/sync-prices.ts",
+    "db:up": "docker compose up -d --wait",
+    "db:credentials": "npm run db:credentials --workspace @opulya/api --"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.20.4",
+    "concurrently": "9.2.5",
+    "dotenv": "17.4.2",
+    "eslint": "10.11.0",
+    "prisma": "7.10.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.0",
+    "vitest": "5.0.3",
+    "prettier": "3.9.9"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2",
+    "mysql2": "3.24.5"
+  }
+}

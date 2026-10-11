@@ -1,0 +1,18 @@
+{
+  "name": "@opulya/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --project tsconfig.typecheck.json"
+  },
+  "dependencies": {
+    "decimal.js": "10.6.0",
+    "zod": "4.6.5"
+  }
+}
