@@ -7,6 +7,8 @@ import { ServiceUnavailableException } from "@nestjs/common";
 process.env.OPULYA_TEST = "1";
 process.env.NODE_ENV = "test";
 process.env.EMAIL_TRANSPORT = "test";
+process.env.EMAIL_SENDS_PER_HOUR = "10000";
+process.env.EMAIL_SENDS_PER_DAY = "10000";
 process.env.ALPHA_VANTAGE_API_KEY = "";
 process.env.DATABASE_URL = testDatabaseUrl();
 process.env.WEB_ORIGIN = "http://localhost:3000";

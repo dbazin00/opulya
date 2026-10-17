@@ -84,6 +84,14 @@ model Session {
   @@index([lastSeenAt])
 }
 
+model EmailQuota {
+  key       String   @id
+  count     Int      @default(0)
+  expiresAt DateTime @db.Timestamptz(6)
+
+  @@index([expiresAt])
+}
+
 model Account {
   id             String                  @id @default(cuid())
   userId         String

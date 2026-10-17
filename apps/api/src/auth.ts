@@ -27,6 +27,10 @@ import {
 import { Database } from "./db.js";
 import { MailService } from "./mail.js";
 import {
+  EmailBudgetExceeded,
+  reserveVerificationEmail,
+} from "./email-budget.js";
+import {
   AuthGuard,
   type AuthRequest,
   cookieName,
@@ -69,22 +73,39 @@ export class AuthService implements OnModuleDestroy {
       tokenHash = hashToken(token),
       now = new Date();
     const minutes = this.mail.settings.EMAIL_VERIFICATION_MINUTES;
-    const issued = await this.db.user.updateMany({
-      where: {
-        id: user.id,
-        emailVerifiedAt: null,
-        OR: [
-          { emailVerificationSentAt: null },
-          { emailVerificationSentAt: { lte: new Date(now.getTime() - 60000) } },
-        ],
-      },
-      data: {
-        emailVerificationTokenHash: tokenHash,
-        emailVerificationExpiresAt: new Date(now.getTime() + minutes * 60000),
-        emailVerificationSentAt: now,
-      },
-    });
-    if (issued.count !== 1) return;
+    let issued: boolean;
+    try {
+      issued = await this.db.$transaction(async (tx) => {
+        const result = await tx.user.updateMany({
+          where: {
+            id: user.id,
+            emailVerifiedAt: null,
+            OR: [
+              { emailVerificationSentAt: null },
+              {
+                emailVerificationSentAt: {
+                  lte: new Date(now.getTime() - 60000),
+                },
+              },
+            ],
+          },
+          data: {
+            emailVerificationTokenHash: tokenHash,
+            emailVerificationExpiresAt: new Date(
+              now.getTime() + minutes * 60000,
+            ),
+            emailVerificationSentAt: now,
+          },
+        });
+        if (result.count !== 1) return false;
+        await reserveVerificationEmail(tx, user.email, this.mail.settings, now);
+        return true;
+      });
+    } catch (error) {
+      if (error instanceof EmailBudgetExceeded) return;
+      throw error;
+    }
+    if (!issued) return;
     const url = new URL("/verify-email", process.env.WEB_ORIGIN);
     // Fragments are not sent to HTTP servers or included in referrer headers.
     url.hash = new URLSearchParams({ token }).toString();

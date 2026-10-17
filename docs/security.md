@@ -26,6 +26,8 @@ Mutations require an exact trusted Origin, JSON and a custom request header. Cro
 
 Auth endpoints have IP/account-based limits; request bodies are limited to 32 KiB. HTTP abuse counters are process-local, so multiple replicas need shared production controls. Enable `TRUST_PROXY=true` only behind one trusted proxy that overwrites forwarding headers.
 
+Verification email attempts additionally use atomic PostgreSQL budgets shared by signup/resend: a recipient cooldown, hourly/daily recipient limits, and configurable global caps. Quota denial preserves the current verification token and returns the same generic acknowledgement. Recipient counter keys contain normalized email hashes, not plaintext addresses; expired counters are removed during send reservations. See [email verification](email-verification.md).
+
 Helmet and frontend headers supply CSP, frame denial, referrer and content-type protection. CSP currently allows inline framework scripts/styles; nonce-based CSP remains further hardening.
 
 Public responses exclude password hashes, secrets and stack traces. Errors use stable localized codes; sensitive requests and credential-bearing provider URLs are not logged. Keep `.env` and protected secret files out of Git and deployment bundles.

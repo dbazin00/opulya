@@ -11,7 +11,7 @@ const cli = fileURLToPath(
   new URL("../../../node_modules/prisma/build/index.js", import.meta.url),
 );
 
-test("consolidated migration creates the final schema on an empty database", async (suite) => {
+test("migrations create the final schema on an empty database", async (suite) => {
   const source = new URL(testDatabaseUrl());
   assert.ok(["localhost", "127.0.0.1"].includes(source.hostname));
   assert.equal(source.port, "5434");
@@ -43,7 +43,7 @@ test("consolidated migration creates the final schema on an empty database", asy
     );
 
     await suite.test(
-      "applies exactly one initial migration and matches the Prisma schema",
+      "applies the baseline and additive migrations and matches the Prisma schema",
       () => {
         assert.doesNotThrow(() =>
           prisma(
@@ -61,11 +61,11 @@ test("consolidated migration creates the final schema on an empty database", asy
       "does not seed users, financial records or predefined categories",
       async () => {
         const history = await db.query(
-          'SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL',
+          'SELECT migration_name FROM "_prisma_migrations" WHERE finished_at IS NOT NULL ORDER BY migration_name',
         );
         assert.deepEqual(
           history.rows.map((row) => row.migration_name),
-          ["0_init"],
+          ["0_init", "20261017120000_email_send_limits"],
         );
         for (const table of [
           "User",
@@ -74,6 +74,7 @@ test("consolidated migration creates the final schema on an empty database", asy
           "Transaction",
           "Asset",
           "InvestmentTransaction",
+          "EmailQuota",
         ])
           assert.equal(
             (await db.query(`SELECT count(*)::int AS count FROM "${table}"`))

@@ -91,7 +91,9 @@ export const en = {
     private: "A private space for your financial life.",
     checkEmail: "Check your email",
     checkEmailBody:
-      "Open your verification email to activate your account. Enter your address below to request another link.",
+      "Open your verification email to activate your account. Check your spam folder if it has not arrived.",
+    changeEmail: "Use a different email address",
+    resendCountdown: "You can request another link in {seconds} seconds.",
     verifyEmail: "Verify email",
     verifyEmailBody:
       "Choose and confirm your password to securely activate your account.",
@@ -521,7 +523,9 @@ export const hr: typeof en = {
     private: "Privatan prostor za vaš financijski život.",
     checkEmail: "Provjerite e-mail",
     checkEmailBody:
-      "Otvorite poruku za potvrdu kako biste aktivirali račun. Unesite adresu u nastavku za novu poveznicu.",
+      "Otvorite poruku za potvrdu kako biste aktivirali račun. Ako poruka nije stigla, provjerite neželjenu poštu.",
+    changeEmail: "Upotrijebite drugu adresu e-pošte",
+    resendCountdown: "Novu poveznicu možete zatražiti za {seconds} sekundi.",
     verifyEmail: "Potvrdi e-mail",
     verifyEmailBody:
       "Odaberite i potvrdite lozinku za sigurnu aktivaciju računa.",

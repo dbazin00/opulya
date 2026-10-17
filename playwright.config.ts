@@ -42,6 +42,8 @@ export default defineConfig({
         API_PORT: "4001",
         NODE_ENV: "test",
         EMAIL_TRANSPORT: "test",
+        EMAIL_SENDS_PER_HOUR: "10000",
+        EMAIL_SENDS_PER_DAY: "10000",
         EMAIL_TEST_OUTBOX_DIR: fileURLToPath(
           new URL("./.runtime/e2e-mail/", import.meta.url),
         ),

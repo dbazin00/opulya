@@ -31,11 +31,45 @@ test("signup requires explicit mailbox verification and supports localized resen
   ).toBe(false);
   const blocked = await page.request.get("/api/accounts");
   expect(blocked.status()).toBe(401);
-  await page.getByLabel("Email address", { exact: true }).fill(email);
-  await page
-    .getByRole("button", { name: "Resend verification email", exact: true })
-    .click();
+  const emailField = page.getByLabel("Email address", { exact: true });
+  await expect(emailField).toHaveValue(email);
+  await expect(emailField).toHaveAttribute("readonly", "");
+  const resend = page.getByRole("button", {
+    name: "Resend verification email",
+    exact: true,
+  });
+  await expect(resend).toBeDisabled();
+  await page.reload();
+  await expect(emailField).toHaveValue(email);
+  await expect(resend).toBeDisabled();
+  await expect(
+    page.getByRole("link", {
+      name: "Use a different email address",
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await page.screenshot({
+    path: `test-results/check-email-${testInfo.project.name}.png`,
+    fullPage: true,
+  });
+  await page.clock.install();
+  await page.clock.fastForward(61_000);
+  await expect(resend).toBeEnabled();
+  await resend.click();
   await expect(page.getByRole("status")).toContainText("unverified account");
+  await expect(resend).toBeDisabled();
   const mail = await verificationMail(email);
   await page.goto(mail.verificationUrl);
   await expect(page).toHaveURL(/\/verify-email$/);

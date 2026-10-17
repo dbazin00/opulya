@@ -4,6 +4,8 @@
 
 The active schema starts with `prisma/migrations/0_init/migration.sql`. `migration_lock.toml` records the PostgreSQL provider. No categories or financial records are seeded.
 
+`20261017120000_email_send_limits` adds shared verification-email counters without changing existing records. Apply pending migrations before deploying the corresponding API; never rewrite an already deployed baseline.
+
 The SQL includes four checks not represented by Prisma's datamodel:
 
 - `LatestPrice_price_positive`: market prices must be positive.
@@ -35,6 +37,6 @@ Generate future migrations against a disposable development database. Never acce
 
 ## Tests
 
-`apps/api/test/migrations.test.ts` applies the baseline to its own generated `opulya_migration_verify_*` database, checks schema, constraints and absence of seed data, then drops only that database. It requires database-creation permission on localhost:5434.
+`apps/api/test/migrations.test.ts` applies all migrations to its own generated `opulya_migration_verify_*` database, checks schema, constraints and absence of seed data, then drops only that database. It requires database-creation permission on localhost:5434.
 
 See Prisma's [baselining](https://www.prisma.io/docs/orm/v7/prisma-migrate/workflows/baselining) and [squashing](https://www.prisma.io/docs/orm/v7/prisma-migrate/workflows/squashing-migrations) guides.

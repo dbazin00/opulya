@@ -4,6 +4,10 @@ import { signupSchema, signupPasswordSchema } from "@opulya/shared";
 import { Database } from "../src/db.js";
 import { MailService } from "../src/mail.js";
 
+// Fixture-only captured mail must not exhaust the shared test database's delivery budget.
+process.env.EMAIL_SENDS_PER_HOUR = "10000";
+process.env.EMAIL_SENDS_PER_DAY = "10000";
+
 // Financial fixtures authenticate through the real signup, verification and login endpoints.
 export function signupRequestBody(body: unknown) {
   if (!body || typeof body !== "object") return body;

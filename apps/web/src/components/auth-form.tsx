@@ -10,6 +10,11 @@ import {
   signupPasswordSchema,
 } from "@opulya/shared";
 import { api, ApiError } from "@/lib/api";
+import {
+  forgetVerification,
+  pendingVerification,
+  rememberVerification,
+} from "@/lib/pending-verification";
 import { Button, ErrorNotice, Field, Loading } from "./ui";
 import { LanguageSelect } from "./language-select";
 export function AuthForm({
@@ -31,6 +36,11 @@ export function AuthForm({
   const [tokenLoaded, setTokenLoaded] = useState(!verify);
   const [verified, setVerified] = useState(false);
   const [resent, setResent] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailLocked, setEmailLocked] = useState(false);
+  const [pendingLoaded, setPendingLoaded] = useState(!pending);
+  const [nextRequestAt, setNextRequestAt] = useState(0);
+  const [remaining, setRemaining] = useState(0);
   const tokenInitialized = useRef(false);
   const newPassword = verify;
   const repeatInput = useRef<HTMLInputElement>(null);
@@ -55,6 +65,27 @@ export function AuthForm({
     },
   ];
   useEffect(() => {
+    if (!pending) return;
+    const saved = pendingVerification();
+    if (saved) {
+      setEmail(saved.email);
+      setEmailLocked(true);
+      setNextRequestAt(saved.nextRequestAt);
+      setRemaining(
+        Math.max(0, Math.ceil((saved.nextRequestAt - Date.now()) / 1000)),
+      );
+    }
+    setPendingLoaded(true);
+  }, [pending]);
+  useEffect(() => {
+    if (!pending || !nextRequestAt) return;
+    const update = () =>
+      setRemaining(Math.max(0, Math.ceil((nextRequestAt - Date.now()) / 1000)));
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [pending, nextRequestAt]);
+  useEffect(() => {
     if (!verify || tokenInitialized.current) return;
     tokenInitialized.current = true;
     const value =
@@ -71,6 +102,7 @@ export function AuthForm({
   }, [repeatPassword, matchMet, t]);
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (pending && (!pendingLoaded || remaining > 0)) return;
     const form = event.currentTarget;
     const data = Object.fromEntries(new FormData(form));
     if (
@@ -101,12 +133,21 @@ export function AuthForm({
         },
       );
       if (verify) {
+        forgetVerification();
         setVerified(true);
         setBusy(false);
       } else if (pending) {
+        const saved = rememberVerification(String(data.email));
+        setEmail(saved.email);
+        setEmailLocked(true);
+        setNextRequestAt(saved.nextRequestAt);
+        setRemaining(60);
         setResent(true);
         setBusy(false);
-      } else window.location.assign(signup ? "/check-email" : "/dashboard");
+      } else {
+        if (signup) rememberVerification(String(data.email));
+        window.location.assign(signup ? "/check-email" : "/dashboard");
+      }
     } catch (e) {
       if (
         !signup &&
@@ -115,6 +156,7 @@ export function AuthForm({
         e instanceof ApiError &&
         e.code === "EMAIL_NOT_VERIFIED"
       ) {
+        rememberVerification(String(data.email), 0);
         window.location.assign("/check-email");
         return;
       }
@@ -181,7 +223,7 @@ export function AuthForm({
             )}
           </p>
         </div>
-        {verify && !tokenLoaded ? (
+        {(verify && !tokenLoaded) || (pending && !pendingLoaded) ? (
           <Loading />
         ) : verified ? (
           <Link href="/login" className="button full">
@@ -222,6 +264,9 @@ export function AuthForm({
                   <input
                     id={id}
                     name="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    readOnly={pending && emailLocked}
                     type="email"
                     autoComplete="email"
                     required
@@ -306,7 +351,9 @@ export function AuthForm({
               busy={busy}
               className="full"
               disabled={
-                (newPassword && (!lengthMet || !matchMet)) || (verify && !token)
+                (newPassword && (!lengthMet || !matchMet)) ||
+                (verify && !token) ||
+                (pending && remaining > 0)
               }
             >
               {t(
@@ -320,7 +367,19 @@ export function AuthForm({
               )}
               <ArrowRight size={17} />
             </Button>
+            {pending && remaining > 0 && (
+              <p className="muted">
+                {t("auth.resendCountdown", { seconds: remaining })}
+              </p>
+            )}
           </form>
+        )}
+        {pending && emailLocked && (
+          <p className="auth-switch">
+            <Link href="/signup" onClick={forgetVerification}>
+              {t("auth.changeEmail")}
+            </Link>
+          </p>
         )}
         {verify && !verified && (
           <p className="auth-switch">
