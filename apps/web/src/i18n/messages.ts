@@ -1,6 +1,85 @@
 export const en = {
   brand: "Opulya",
   tagline: "Your finances, in perspective.",
+  landing: {
+    metaTitle: "Opulya | Your personal finances, together",
+    metaDescription:
+      "Bring your accounts, everyday spending and manually recorded investments into one considered view with Opulya.",
+    introduction: "Personal finance, thoughtfully connected.",
+    description:
+      "Your everyday spending and long-term investments. Together in one clear, considered view.",
+    overview: "A clearer picture",
+    howItWorks: "Getting started",
+    questions: "Questions",
+    openMenu: "Open navigation",
+    closeMenu: "Close navigation",
+    explore: "Take a look",
+    heroNote: "Manually tracked. Personally yours.",
+    preview: "Explore an illustrative Opulya overview",
+    example: "Illustrative example",
+    exampleNote:
+      "Example figures, not an actual account or investment performance.",
+    overviewTab: "Overview",
+    transactionsTab: "Transactions",
+    investmentsTab: "Investments",
+    demoTabs: "Product preview",
+    demoAccounts: "Everyday account",
+    demoSavings: "Savings",
+    demoPortfolio: "Investment account",
+    demoSalary: "Salary",
+    demoFood: "Food / Groceries",
+    demoTransfer: "Savings transfer",
+    demoAsset: "Example ETF",
+    demoHolding: "A sample holding, including purchase fees in its cost basis.",
+    demoQuantity: "10 units",
+    demoCost: "Acquisition cost",
+    demoValue: "Market value",
+    demoGain: "Unrealized gain",
+    demoPriceNote:
+      "Market prices may be delayed. Coverage depends on the instrument and data provider.",
+    featuresTitle: "A little less scattered. A lot more clarity.",
+    featuresBody: "One place for the details that make up your financial life.",
+    accountsTitle: "Every account, in the picture.",
+    accountsBody:
+      "Bring bank accounts, cash and investment accounts together. Record transfers without counting them as income or spending.",
+    spendingTitle: "Follow the money. Find the pattern.",
+    spendingBody:
+      "See your cashflow by month, day or account. Build categories your way and explore every level of your spending.",
+    investmentsTitle: "Keep your investments in perspective.",
+    investmentsBody:
+      "Record purchases, sales, dividends and fees. See your holdings and profit or loss alongside available market prices.",
+    stepsTitle: "Start with what you know.",
+    stepsBody:
+      "No bank connection needed. Add a little today and build your picture over time.",
+    stepOne: "Make it yours",
+    stepOneBody:
+      "Create an account, verify your email and choose English or Croatian.",
+    stepTwo: "Bring your balances together",
+    stepTwoBody:
+      "Add your accounts and opening balances. Create the categories that fit your life.",
+    stepThree: "Keep your picture up to date",
+    stepThreeBody:
+      "Record everyday activity and investments, then follow how your money changes.",
+    privacyTitle: "Your overview. Not your bank login.",
+    privacyBody:
+      "Opulya works with the records you enter. You do not share bank or broker login credentials with the app.",
+    privacyNote:
+      "Email-verified signup and protected access to your personal accounts.",
+    faqTitle: "A few things worth knowing.",
+    faqBank: "Does Opulya connect to my bank or broker?",
+    faqBankBody:
+      "No. You add balances and activity manually. Opulya organizes your records; it does not move your money or place trades.",
+    faqPrices: "Are investment prices live?",
+    faqPricesBody:
+      "No. Available market prices are refreshed on a daily schedule and may be delayed. You can see the price date, and not every instrument is covered. Your broker remains the source for trading decisions.",
+    faqCategories: "Can I create my own categories?",
+    faqCategoriesBody:
+      "Yes. Start with your own income and expense categories, add as many nested subcategories as you need, and explore them in analytics.",
+    faqMobile: "Can I use Opulya on my phone?",
+    faqMobileBody:
+      "Yes. Opulya works in your browser on desktop and mobile, with English and Croatian available throughout the app.",
+    disclaimer: "A personal tracking tool. Not financial or investment advice.",
+  },
   nav: {
     dashboard: "Overview",
     accounts: "Accounts",
@@ -65,6 +144,13 @@ export const en = {
     navigation: "Main navigation",
   },
   auth: {
+    contextTitle: "A clearer picture starts here.",
+    signupVerificationHint:
+      "We will email you a link to verify your address and choose your password.",
+    showPassword: "Show password",
+    hidePassword: "Hide password",
+    showRepeatPassword: "Show repeated password",
+    hideRepeatPassword: "Hide repeated password",
     login: "Welcome back",
     signup: "Make room for clarity",
     loginSubtitle: "Sign in to your Opulya account.",
@@ -432,6 +518,86 @@ export const en = {
 export const hr: typeof en = {
   brand: "Opulya",
   tagline: "Vaše financije, jasnija slika.",
+  landing: {
+    metaTitle: "Opulya | Vaše osobne financije na jednom mjestu",
+    metaDescription:
+      "Povežite pregled svojih računa, svakodnevne potrošnje i ručno unesenih ulaganja uz Opulyu.",
+    introduction: "Osobne financije, promišljeno povezane.",
+    description:
+      "Svakodnevna potrošnja i dugoročna ulaganja. Zajedno u jednom jasnom, preglednom prikazu.",
+    overview: "Jasnija slika",
+    howItWorks: "Prvi koraci",
+    questions: "Pitanja",
+    openMenu: "Otvori navigaciju",
+    closeMenu: "Zatvori navigaciju",
+    explore: "Pogledajte izbliza",
+    heroNote: "Ručni unos. Vaša osobna slika.",
+    preview: "Istražite ogledni prikaz Opulye",
+    example: "Ogledni primjer",
+    exampleNote: "Ogledni iznosi, a ne stvarni račun ili prinos ulaganja.",
+    overviewTab: "Pregled",
+    transactionsTab: "Transakcije",
+    investmentsTab: "Ulaganja",
+    demoTabs: "Pregled aplikacije",
+    demoAccounts: "Tekući račun",
+    demoSavings: "Štednja",
+    demoPortfolio: "Investicijski račun",
+    demoSalary: "Plaća",
+    demoFood: "Hrana / Namirnice",
+    demoTransfer: "Prijenos na štednju",
+    demoAsset: "Ogledni ETF",
+    demoHolding:
+      "Ogledno ulaganje s naknadama za kupnju uključenima u trošak stjecanja.",
+    demoQuantity: "10 udjela",
+    demoCost: "Trošak stjecanja",
+    demoValue: "Tržišna vrijednost",
+    demoGain: "Nerealizirana dobit",
+    demoPriceNote:
+      "Tržišne cijene mogu kasniti. Dostupnost ovisi o instrumentu i pružatelju podataka.",
+    featuresTitle: "Manje raspršenih podataka. Više jasnoće.",
+    featuresBody: "Jedno mjesto za detalje koji čine vaš financijski život.",
+    accountsTitle: "Svaki račun dio je cjeline.",
+    accountsBody:
+      "Objedinite bankovne, gotovinske i investicijske račune. Bilježite prijenose bez pribrajanja prihodima ili potrošnji.",
+    spendingTitle: "Pratite novac. Uočite obrasce.",
+    spendingBody:
+      "Pogledajte novčani tok po mjesecu, danu ili računu. Oblikujte vlastite kategorije i istražite svaku razinu potrošnje.",
+    investmentsTitle: "Jasnija slika vaših ulaganja.",
+    investmentsBody:
+      "Bilježite kupnje, prodaje, dividende i naknade. Pratite udjele i dobit ili gubitak uz dostupne tržišne cijene.",
+    stepsTitle: "Počnite s onim što znate.",
+    stepsBody:
+      "Bez povezivanja s bankom. Dodajte malo danas i postupno izgradite svoj pregled.",
+    stepOne: "Prilagodite sebi",
+    stepOneBody:
+      "Otvorite račun, potvrdite e-mail i odaberite hrvatski ili engleski jezik.",
+    stepTwo: "Objedinite svoja stanja",
+    stepTwoBody:
+      "Dodajte račune i početna stanja. Oblikujte kategorije koje odgovaraju vašem životu.",
+    stepThree: "Održavajte pregled ažurnim",
+    stepThreeBody:
+      "Bilježite svakodnevne aktivnosti i ulaganja pa pratite kako se vaši iznosi mijenjaju.",
+    privacyTitle: "Vaš pregled. Ne prijava u banku.",
+    privacyBody:
+      "Opulya koristi podatke koje sami unesete. S aplikacijom ne dijelite pristupne podatke svoje banke ili brokera.",
+    privacyNote:
+      "Registracija s potvrdom e-maila i zaštićen pristup vašim osobnim računima.",
+    faqTitle: "Nekoliko korisnih odgovora.",
+    faqBank: "Povezuje li se Opulya s mojom bankom ili brokerom?",
+    faqBankBody:
+      "Ne. Stanja i aktivnosti unosite ručno. Opulya organizira vaše zapise; ne prenosi novac i ne izvršava naloge za trgovanje.",
+    faqPrices: "Jesu li cijene ulaganja dostupne uživo?",
+    faqPricesBody:
+      "Ne. Dostupne tržišne cijene osvježavaju se prema dnevnom rasporedu i mogu kasniti. Prikazan je datum cijene, a nisu pokriveni svi instrumenti. Za odluke o trgovanju provjerite podatke svojeg brokera.",
+    faqCategories: "Mogu li oblikovati vlastite kategorije?",
+    faqCategoriesBody:
+      "Da. Izradite vlastite kategorije prihoda i rashoda, dodajte koliko god razina potkategorija trebate i istražujte ih u analitici.",
+    faqMobile: "Mogu li koristiti Opulyu na mobitelu?",
+    faqMobileBody:
+      "Da. Opulya radi u pregledniku na računalu i mobitelu, uz hrvatski i engleski jezik u cijeloj aplikaciji.",
+    disclaimer:
+      "Alat za osobno praćenje. Nije financijski ni investicijski savjet.",
+  },
   nav: {
     dashboard: "Pregled",
     accounts: "Računi",
@@ -496,6 +662,13 @@ export const hr: typeof en = {
     navigation: "Glavna navigacija",
   },
   auth: {
+    contextTitle: "Jasnija slika počinje ovdje.",
+    signupVerificationHint:
+      "Poslat ćemo vam poveznicu za potvrdu adrese i odabir lozinke.",
+    showPassword: "Prikaži lozinku",
+    hidePassword: "Sakrij lozinku",
+    showRepeatPassword: "Prikaži ponovljenu lozinku",
+    hideRepeatPassword: "Sakrij ponovljenu lozinku",
     login: "Dobro došli natrag",
     signup: "Vrijeme je za jasniju sliku",
     loginSubtitle: "Prijavite se na svoj Opulya račun.",

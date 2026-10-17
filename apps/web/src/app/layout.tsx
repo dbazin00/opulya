@@ -16,7 +16,7 @@ export default async function RootLayout({
     ? resolveLocale(preference)
     : preferredLocale((await headers()).get("accept-language"));
   return (
-    <html lang={locale}>
+    <html lang={locale} data-scroll-behavior="smooth">
       <body>
         <Providers locale={locale}>{children}</Providers>
       </body>

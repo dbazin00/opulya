@@ -1,6 +1,5 @@
 "use client";
 import { useState, type ReactNode } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -21,6 +20,7 @@ import { api } from "@/lib/api";
 import { useUser } from "./providers";
 import { ErrorNotice, IconButton, Modal } from "./ui";
 import { TransactionForm } from "./forms";
+import { BrandLink } from "./brand-link";
 const links = [
   ["dashboard", LayoutDashboard],
   ["accounts", Wallet],
@@ -59,16 +59,7 @@ export function Shell({ children }: { children: ReactNode }) {
         {t("common.skip")}
       </a>
       <aside className="sidebar">
-        <Link href="/dashboard" className="brand-lockup">
-          <Image
-            src="/opulya-mark.png"
-            alt=""
-            width={48}
-            height={48}
-            priority
-          />
-          <span>{t("brand")}</span>
-        </Link>
+        <BrandLink href="/dashboard" className="brand-lockup" />
         <nav aria-label={t("common.navigation")}>{nav()}</nav>
         <div className="sidebar-bottom">
           <span className="avatar">
@@ -99,9 +90,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
       <div className="main-column">
         <header className="topbar">
-          <Link className="mobile-brand wordmark" href="/dashboard">
-            {t("brand")}
-          </Link>
+          <BrandLink className="mobile-brand" href="/dashboard" />
           <div className="desktop-breadcrumb">
             {t.has(`nav.${path.split("/")[1]}`)
               ? t(`nav.${path.split("/")[1]}`)
@@ -111,8 +100,13 @@ export function Shell({ children }: { children: ReactNode }) {
             <span className="user-greeting">
               {t("dashboard.greeting", { name: user.firstName })}
             </span>
-            <button className="button" onClick={() => setAdd(true)}>
-              <Plus size={18} />
+            <button
+              className="button"
+              aria-label={t("transactions.add")}
+              title={t("transactions.add")}
+              onClick={() => setAdd(true)}
+            >
+              <Plus size={18} aria-hidden="true" />
               <span>{t("transactions.add")}</span>
             </button>
           </div>

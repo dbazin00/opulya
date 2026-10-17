@@ -1,9 +1,18 @@
 "use client";
 import { useEffect, useId, useRef, useState, type SubmitEvent } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { ArrowRight, CheckCircle2, Circle, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Circle,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  MailCheck,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import {
   passwordMaxLength,
   passwordMinLength,
@@ -16,7 +25,7 @@ import {
   rememberVerification,
 } from "@/lib/pending-verification";
 import { Button, ErrorNotice, Field, Loading } from "./ui";
-import { LanguageSelect } from "./language-select";
+import { AuthShell } from "./auth-shell";
 export function AuthForm({
   signup,
   verify = false,
@@ -32,6 +41,8 @@ export function AuthForm({
   const [error, setError] = useState<unknown>();
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [repeatVisible, setRepeatVisible] = useState(false);
   const [token, setToken] = useState("");
   const [tokenLoaded, setTokenLoaded] = useState(!verify);
   const [verified, setVerified] = useState(false);
@@ -165,37 +176,42 @@ export function AuthForm({
     }
   }
   return (
-    <main
-      className={`auth-page ${signup || verify ? "auth-signup" : "auth-login"}`}
+    <AuthShell
+      onBeforeLocaleChange={() => {
+        if (verify && token)
+          window.history.replaceState(
+            null,
+            "",
+            `${window.location.pathname}#${new URLSearchParams({ token })}`,
+          );
+      }}
     >
-      <div className="auth-top">
-        <Link className="wordmark auth-brand" href="/" aria-label={t("brand")}>
-          <Image
-            src="/opulya-mark.png"
-            alt={t("brand")}
-            width={44}
-            height={44}
-            priority
-          />
-          <span aria-hidden="true">{t("brand")}</span>
-        </Link>
-        <LanguageSelect
-          label={t("common.language")}
-          value={locale}
-          onValueChange={(next) => {
-            document.cookie = `OPULYA_LOCALE=${next}; Path=/; SameSite=Lax; Max-Age=31536000`;
-            if (verify && token)
-              window.history.replaceState(
-                null,
-                "",
-                `${window.location.pathname}#${new URLSearchParams({ token })}`,
-              );
-            window.location.reload();
-          }}
-        />
-      </div>
-      <section className="auth-form">
+      <section
+        className="auth-form"
+        key={
+          verified
+            ? "verified"
+            : verify
+              ? "verify"
+              : pending
+                ? "pending"
+                : signup
+                  ? "signup"
+                  : "login"
+        }
+      >
         <div className="auth-intro">
+          <span className="auth-form-symbol" aria-hidden="true">
+            {verified ? (
+              <CheckCircle2 size={23} />
+            ) : verify || pending ? (
+              <MailCheck size={23} />
+            ) : signup ? (
+              <UserRound size={23} />
+            ) : (
+              <LockKeyhole size={23} />
+            )}
+          </span>
           <h1>
             {t(
               verified
@@ -278,19 +294,44 @@ export function AuthForm({
             {!pending && !signup && (
               <Field label={t("auth.password")}>
                 {(id) => (
-                  <input
-                    id={id}
-                    name="password"
-                    type="password"
-                    autoComplete={
-                      newPassword ? "new-password" : "current-password"
-                    }
-                    required
-                    minLength={newPassword ? passwordMinLength : 1}
-                    maxLength={passwordMaxLength}
-                    aria-describedby={newPassword ? rulesId : undefined}
-                    onChange={(event) => setPassword(event.target.value)}
-                  />
+                  <div className="password-input">
+                    <input
+                      id={id}
+                      name="password"
+                      type={passwordVisible ? "text" : "password"}
+                      autoComplete={
+                        newPassword ? "new-password" : "current-password"
+                      }
+                      required
+                      minLength={newPassword ? passwordMinLength : 1}
+                      maxLength={passwordMaxLength}
+                      aria-describedby={newPassword ? rulesId : undefined}
+                      onChange={(event) => setPassword(event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="icon-button"
+                      aria-label={t(
+                        passwordVisible
+                          ? "auth.hidePassword"
+                          : "auth.showPassword",
+                      )}
+                      title={t(
+                        passwordVisible
+                          ? "auth.hidePassword"
+                          : "auth.showPassword",
+                      )}
+                      aria-pressed={passwordVisible}
+                      aria-controls={id}
+                      onClick={() => setPasswordVisible(!passwordVisible)}
+                    >
+                      {passwordVisible ? (
+                        <EyeOff size={18} aria-hidden="true" />
+                      ) : (
+                        <Eye size={18} aria-hidden="true" />
+                      )}
+                    </button>
+                  </div>
                 )}
               </Field>
             )}
@@ -298,20 +339,45 @@ export function AuthForm({
               <>
                 <Field label={t("auth.repeatPassword")}>
                   {(id) => (
-                    <input
-                      ref={repeatInput}
-                      id={id}
-                      name="repeatPassword"
-                      type="password"
-                      autoComplete="new-password"
-                      required
-                      maxLength={passwordMaxLength}
-                      aria-describedby={rulesId}
-                      aria-invalid={repeatPassword.length > 0 && !matchMet}
-                      onChange={(event) =>
-                        setRepeatPassword(event.target.value)
-                      }
-                    />
+                    <div className="password-input">
+                      <input
+                        ref={repeatInput}
+                        id={id}
+                        name="repeatPassword"
+                        type={repeatVisible ? "text" : "password"}
+                        autoComplete="new-password"
+                        required
+                        maxLength={passwordMaxLength}
+                        aria-describedby={rulesId}
+                        aria-invalid={repeatPassword.length > 0 && !matchMet}
+                        onChange={(event) =>
+                          setRepeatPassword(event.target.value)
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="icon-button"
+                        aria-label={t(
+                          repeatVisible
+                            ? "auth.hideRepeatPassword"
+                            : "auth.showRepeatPassword",
+                        )}
+                        title={t(
+                          repeatVisible
+                            ? "auth.hideRepeatPassword"
+                            : "auth.showRepeatPassword",
+                        )}
+                        aria-pressed={repeatVisible}
+                        aria-controls={id}
+                        onClick={() => setRepeatVisible(!repeatVisible)}
+                      >
+                        {repeatVisible ? (
+                          <EyeOff size={18} aria-hidden="true" />
+                        ) : (
+                          <Eye size={18} aria-hidden="true" />
+                        )}
+                      </button>
+                    </div>
                   )}
                 </Field>
                 <div id={rulesId} className="password-requirements">
@@ -341,6 +407,12 @@ export function AuthForm({
               </>
             )}
             <ErrorNotice error={error} />
+            {signup && (
+              <p className="auth-verification-hint">
+                <MailCheck size={17} aria-hidden="true" />
+                <span>{t("auth.signupVerificationHint")}</span>
+              </p>
+            )}
             {resent && (
               <p className="notice" role="status">
                 {t("auth.verificationRequested")}
@@ -386,18 +458,19 @@ export function AuthForm({
             <Link href="/check-email">{t("auth.resendVerification")}</Link>
           </p>
         )}
-        <p className="auth-switch">
-          {t(signup ? "auth.hasAccount" : "auth.noAccount")}{" "}
-          <Link href={signup ? "/login" : "/signup"}>
-            {t(signup ? "auth.loginLink" : "auth.signupLink")}
-          </Link>
-        </p>
+        {!pending && !verify && (
+          <p className="auth-switch">
+            {t(signup ? "auth.hasAccount" : "auth.noAccount")}{" "}
+            <Link href={signup ? "/login" : "/signup"}>
+              {t(signup ? "auth.loginLink" : "auth.signupLink")}
+            </Link>
+          </p>
+        )}
         <p className="privacy">
           <ShieldCheck size={15} />
           {t("auth.private")}
         </p>
       </section>
-      <footer>{t("tagline")}</footer>
-    </main>
+    </AuthShell>
   );
 }
