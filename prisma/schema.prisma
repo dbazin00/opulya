@@ -25,6 +25,11 @@ enum CategoryType {
   EXPENSE
 }
 
+enum BudgetScope {
+  RECURRING
+  MONTH
+}
+
 enum InvestmentType {
   BUY
   SELL
@@ -68,6 +73,7 @@ model User {
   transactions               Transaction[]
   assets                     Asset[]
   investments                InvestmentTransaction[]
+  budgets                    Budget[]
 }
 
 model Session {
@@ -125,11 +131,29 @@ model Category {
   parent       Category?     @relation("CategoryTree", fields: [parentId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
   children     Category[]    @relation("CategoryTree")
   transactions Transaction[]
+  budgets      Budget[]
 
   @@unique([id, userId])
   @@unique([userId, type, defaultKey])
   @@index([userId, parentId])
   @@index([userId, archivedAt])
+}
+
+model Budget {
+  id         String      @id @default(cuid())
+  userId     String
+  categoryId String
+  currency   String      @db.VarChar(3)
+  month      String      @db.VarChar(7)
+  scope      BudgetScope
+  amount     Decimal?    @db.Decimal(24, 8)
+  createdAt  DateTime    @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime    @updatedAt @db.Timestamptz(6)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  category   Category    @relation(fields: [categoryId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([userId, categoryId, currency, month, scope])
+  @@index([userId, currency, month])
 }
 
 model Transaction {

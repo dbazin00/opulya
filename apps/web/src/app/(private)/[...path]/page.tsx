@@ -12,6 +12,7 @@ export default async function Page({
       "accounts",
       "transactions",
       "analytics",
+      "budgets",
       "investments",
       "assets",
       "categories",

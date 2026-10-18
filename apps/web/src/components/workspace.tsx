@@ -62,6 +62,7 @@ import { InvestmentView } from "./investment-view";
 import { SettingsView } from "./settings-view";
 import { CategoriesView } from "./categories-view";
 import { AssetsView } from "./assets-view";
+import { BudgetsView } from "./budgets-view";
 
 export function useVisible() {
   const [active, setActive] = useState(true);
@@ -111,7 +112,8 @@ export function Workspace({
     queryKey: ["categories"],
     queryFn: () => api<Category[]>("categories"),
   });
-  const showMonth = ["transactions", "analytics"].includes(view) || !!accountId;
+  const showMonth =
+    ["transactions", "analytics", "budgets"].includes(view) || !!accountId;
   return (
     <div className="workspace">
       <div className="page-heading">
@@ -124,7 +126,9 @@ export function Workspace({
         </div>
         <div className="page-actions">
           {showMonth && <MonthPicker value={month} onChange={setMonth} />}
-          {["dashboard", "analytics", "transactions"].includes(view) && (
+          {["dashboard", "analytics", "transactions", "budgets"].includes(
+            view,
+          ) && (
             <Dropdown
               className="currency-select"
               value={currency}
@@ -186,6 +190,16 @@ export function Workspace({
       {view === "categories" && (
         <CategoriesView categories={categories.data ?? []} />
       )}
+      {view === "budgets" &&
+        (categories.isLoading ? (
+          <Loading />
+        ) : (
+          <BudgetsView
+            month={month}
+            currency={currency}
+            categories={categories.data ?? []}
+          />
+        ))}
       {view === "analytics" && (
         <AnalyticsView
           month={month}

@@ -2,6 +2,8 @@
 
 Personal finance and investment tracking with English and Croatian interfaces. Built with Next.js, NestJS, PostgreSQL and Prisma in an npm workspace.
 
+Monthly budgets support repeating category limits, income targets and individual month overrides.
+
 ## Local setup
 
 Requires Node.js 22.12+, npm 10.9+ and Docker Desktop. On a fresh checkout:

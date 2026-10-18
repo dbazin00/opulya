@@ -22,6 +22,7 @@ import {
 import { LedgerService } from "./ledger.js";
 import { FinanceController } from "./controller.js";
 import { ReportsService } from "./reports.js";
+import { BudgetsService } from "./budgets.js";
 import { MarketDataService } from "./market.js";
 import {
   MarketPriceSync,
@@ -53,6 +54,7 @@ class HealthController {
     AuthGuard,
     LedgerService,
     ReportsService,
+    BudgetsService,
     MarketDataService,
     MarketBudget,
     InstrumentProvider,

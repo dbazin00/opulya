@@ -127,7 +127,11 @@ test("Alpha Vantage reference directory and selected-instrument persistence", as
         let result = await request(
           `instruments/directory?currency=USD&search=${prefix}`,
         );
-        for (let i = 0; result.body.loading.length && i < 50; i++) {
+        for (
+          let i = 0;
+          i < 50 && (result.body.loading.length || result.body.items.length < 3);
+          i++
+        ) {
           await new Promise((resolve) => setTimeout(resolve, 10));
           result = await request(
             `instruments/directory?currency=USD&search=${prefix}`,

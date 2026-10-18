@@ -17,6 +17,7 @@ import { AuthGuard, type AuthRequest } from "./security.js";
 import { Database } from "./db.js";
 import { LedgerService } from "./ledger.js";
 import { ReportsService } from "./reports.js";
+import { BudgetsService } from "./budgets.js";
 import { PriceScheduler } from "./price-scheduler.js";
 import {
   InstrumentDirectory,
@@ -37,12 +38,25 @@ export class FinanceController {
     @Inject(Database) private readonly db: Database,
     @Inject(LedgerService) private readonly ledger: LedgerService,
     @Inject(ReportsService) private readonly reports: ReportsService,
+    @Inject(BudgetsService) private readonly budgets: BudgetsService,
     @Inject(InstrumentsService)
     private readonly instruments: InstrumentsService,
     @Inject(PriceScheduler) private readonly prices: PriceScheduler,
     @Inject(InstrumentDirectory)
     private readonly directory: InstrumentDirectory,
   ) {}
+  @Get("budgets") budgetList(@Req() req: AuthRequest, @Query() query: unknown) {
+    return this.budgets.list(req.user.id, query, req.user.timeZone);
+  }
+  @Post("budgets") saveBudget(@Req() req: AuthRequest, @Body() body: unknown) {
+    return this.budgets.save(req.user.id, body);
+  }
+  @Delete("budgets/override") resetBudget(
+    @Req() req: AuthRequest,
+    @Body() body: unknown,
+  ) {
+    return this.budgets.resetMonth(req.user.id, body);
+  }
   @Get("accounts") async accounts(@Req() req: AuthRequest) {
     return (await this.ledger.all(req.user.id)).accounts;
   }
@@ -91,7 +105,7 @@ export class FinanceController {
     return this.db.category.findMany({
       where: { userId: req.user.id },
       orderBy: { createdAt: "asc" },
-      include: { _count: { select: { transactions: true } } },
+      include: { _count: { select: { transactions: true, budgets: true } } },
     });
   }
   @Post("categories") category(@Req() req: AuthRequest, @Body() body: unknown) {

@@ -65,7 +65,11 @@ test("migrations create the final schema on an empty database", async (suite) =>
         );
         assert.deepEqual(
           history.rows.map((row) => row.migration_name),
-          ["0_init", "20261017120000_email_send_limits"],
+          [
+            "0_init",
+            "20261017120000_email_send_limits",
+            "20261018120000_monthly_budgets",
+          ],
         );
         for (const table of [
           "User",
@@ -75,6 +79,7 @@ test("migrations create the final schema on an empty database", async (suite) =>
           "Asset",
           "InvestmentTransaction",
           "EmailQuota",
+          "Budget",
         ])
           assert.equal(
             (await db.query(`SELECT count(*)::int AS count FROM "${table}"`))
@@ -92,7 +97,7 @@ test("migrations create the final schema on an empty database", async (suite) =>
       },
     );
     await suite.test(
-      "retains precise balance snapshots and all four custom checks",
+      "retains precise balance snapshots and financial constraints",
       async () => {
         const columns = await db.query(
           "SELECT numeric_precision, numeric_scale FROM information_schema.columns WHERE table_schema='public' AND (table_name='Transaction' AND column_name IN ('sourceBalanceAfter','destinationBalanceAfter') OR table_name='InvestmentTransaction' AND column_name='balanceAfter')",
@@ -106,6 +111,8 @@ test("migrations create the final schema on an empty database", async (suite) =>
         assert.deepEqual(
           checks.rows.map((row) => row.conname),
           [
+            "Budget_amount_check",
+            "Budget_month_check",
             "InvestmentTransaction_no_self_correction",
             "LatestPrice_price_positive",
             "Transaction_hidden_balance_only",
@@ -131,6 +138,31 @@ test("migrations create the final schema on an empty database", async (suite) =>
         error.code === code &&
         "constraint" in error &&
         error.constraint === name;
+    await db.query(
+      `INSERT INTO "Category" (id,"userId",type,name,"updatedAt") VALUES ('category-a','u-a','EXPENSE','Budget fixture',now())`,
+    );
+    await suite.test(
+      "enforces budget amounts, months and category ownership at the database boundary",
+      async () => {
+        const insert = (user: string, month: string, amount: string) =>
+          db.query(
+            'INSERT INTO "Budget" (id,"userId","categoryId",currency,month,scope,amount,"updatedAt") VALUES ($1,$2,\'category-a\',\'EUR\',$3,\'RECURRING\',$4,now())',
+            [randomUUID(), user, month, amount],
+          );
+        await assert.rejects(
+          insert("u-a", "2026-03", "-1"),
+          constraint("Budget_amount_check"),
+        );
+        await assert.rejects(
+          insert("u-a", "2026-13", "10"),
+          constraint("Budget_month_check"),
+        );
+        await assert.rejects(
+          insert("u-b", "2026-03", "10"),
+          constraint("Budget_categoryId_userId_fkey", "23503"),
+        );
+      },
+    );
     await suite.test("rejects non-positive market prices", async () => {
       await assert.rejects(
         db.query(`INSERT INTO "LatestPrice" ("instrumentId","tradingDate","availableAt",price,currency,provider,"fetchedAt")

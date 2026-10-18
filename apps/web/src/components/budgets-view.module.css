@@ -1,0 +1,142 @@
+.tabs {
+  width: 300px;
+  max-width: 100%;
+  margin-bottom: 28px;
+}
+.head,
+.row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) repeat(3, minmax(100px, 150px)) 44px;
+  gap: 12px;
+  align-items: center;
+}
+.head {
+  padding: 0 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.head > span:not(:first-child) {
+  text-align: right;
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.row {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.category {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  min-width: 0;
+  gap: 4px;
+}
+.name {
+  grid-column: 2;
+  min-width: 0;
+}
+.name strong {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.value {
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.mobileLabel {
+  display: none;
+}
+.action {
+  justify-self: end;
+}
+.progressLine {
+  grid-column: 2 / 5;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+.progressLine small {
+  flex-shrink: 0;
+  font-size: 11px;
+}
+.track {
+  flex: 1;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #e3eae7;
+}
+.track > span {
+  display: block;
+  height: 100%;
+  background: #08745a;
+}
+.track.over > span {
+  background: #b83540;
+}
+.over {
+  color: #b12d37;
+}
+.achieved {
+  color: #08745a;
+}
+@media (max-width: 1100px) {
+  .head,
+  .row {
+    grid-template-columns: minmax(140px, 1fr) repeat(3, minmax(75px, 1fr)) 44px;
+    gap: 8px;
+  }
+}
+@media (max-width: 600px) {
+  .tabs {
+    width: 100%;
+  }
+  .head {
+    display: none;
+  }
+  .row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 8px;
+    padding: 16px 0;
+    position: relative;
+  }
+  .category {
+    grid-column: 1 / -1;
+    padding-right: 48px;
+    min-height: 44px;
+  }
+  .action {
+    position: absolute;
+    right: 0;
+    top: 16px;
+  }
+  .value {
+    text-align: left;
+    font-size: 13px;
+  }
+  .mobileLabel {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 5px;
+  }
+  .progressLine {
+    grid-column: 1 / -1;
+  }
+}

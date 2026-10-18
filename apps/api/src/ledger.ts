@@ -464,6 +464,8 @@ export class LedgerService {
       // Include voided and corrected entries so their historical associations survive.
       if (await tx.transaction.count({ where: { userId, categoryId: id } }))
         throw new ConflictException("CATEGORY_IN_USE");
+      if (await tx.budget.count({ where: { userId, categoryId: id } }))
+        throw new ConflictException("CATEGORY_IN_USE");
       await tx.category.delete({ where: { id, userId } });
       return { ok: true };
     });

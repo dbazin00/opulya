@@ -39,6 +39,7 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
       ? (categories.find((c) => c.id === form.id) ?? form)
       : undefined;
   const hasChildren = categories.some((c) => c.parentId === current?.id);
+  const isUsed = !!(current?._count?.transactions || current?._count?.budgets);
   const close = () => {
     setForm(undefined);
     setAction(undefined);
@@ -369,21 +370,11 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
                     className="secondary category-manage"
                     onClick={() => {
                       manage.reset();
-                      setAction(
-                        current._count?.transactions ? "archive" : "delete",
-                      );
+                      setAction(isUsed ? "archive" : "delete");
                     }}
                   >
-                    {current._count?.transactions ? (
-                      <Archive size={17} />
-                    ) : (
-                      <Trash2 size={17} />
-                    )}
-                    {t(
-                      current._count?.transactions
-                        ? "common.archive"
-                        : "common.delete",
-                    )}
+                    {isUsed ? <Archive size={17} /> : <Trash2 size={17} />}
+                    {t(isUsed ? "common.archive" : "common.delete")}
                   </Button>
                 )
               }

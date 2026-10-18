@@ -21,7 +21,7 @@
     "typecheck:tooling": "tsc --project tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:integration": "tsx --tsconfig apps/api/tsconfig.typecheck.json --test --test-concurrency=1 apps/api/test/integration.test.ts apps/api/test/market.test.ts apps/api/test/auth-throttle.test.ts apps/api/test/balance-snapshots.test.ts apps/api/test/category-lifecycle.test.ts apps/api/test/account-lifecycle.test.ts apps/api/test/asset-library.test.ts apps/api/test/instrument-directory.test.ts apps/api/test/investment-corrections.test.ts apps/api/test/email-verification.test.ts apps/api/test/email-send-limits.test.ts apps/api/test/migrations.test.ts",
+    "test:integration": "tsx --tsconfig apps/api/tsconfig.typecheck.json --test --test-concurrency=1 apps/api/test/integration.test.ts apps/api/test/market.test.ts apps/api/test/auth-throttle.test.ts apps/api/test/balance-snapshots.test.ts apps/api/test/category-lifecycle.test.ts apps/api/test/account-lifecycle.test.ts apps/api/test/asset-library.test.ts apps/api/test/instrument-directory.test.ts apps/api/test/investment-corrections.test.ts apps/api/test/email-verification.test.ts apps/api/test/email-send-limits.test.ts apps/api/test/budgets.test.ts apps/api/test/migrations.test.ts",
     "test:e2e": "playwright test",
     "db:generate": "prisma generate",
     "db:backfill-balances": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/backfill-balance-snapshots.ts",

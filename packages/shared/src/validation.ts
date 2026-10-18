@@ -118,6 +118,23 @@ export const categorySchema = z
 export const categoryUpdateSchema = z
   .object({ name, parentId: id.nullable() })
   .strict();
+const budgetMonth = z.string().regex(/^[1-9]\d{3}-(0[1-9]|1[0-2])$/);
+export const budgetQuerySchema = z
+  .object({
+    month: budgetMonth,
+    currency: currencySchema.default("EUR"),
+    type: z.enum(["INCOME", "EXPENSE"]).default("EXPENSE"),
+  })
+  .strict();
+export const budgetKeySchema = z
+  .object({ categoryId: id, currency: currencySchema, month: budgetMonth })
+  .strict();
+export const budgetWriteSchema = budgetKeySchema
+  .extend({
+    scope: z.enum(["RECURRING", "MONTH"]),
+    amount: nonnegative.nullable(),
+  })
+  .strict();
 export const transactionSchema = z
   .object({
     type: z.enum(transactionTypes),

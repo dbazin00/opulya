@@ -25,7 +25,7 @@ export interface Category {
   parentId: string | null;
   type: "INCOME" | "EXPENSE";
   archivedAt?: string | null;
-  _count?: { transactions: number };
+  _count?: { transactions: number; budgets?: number };
 }
 export interface Transaction extends LedgerTransaction {
   sourceBalanceAfter?: string | null;

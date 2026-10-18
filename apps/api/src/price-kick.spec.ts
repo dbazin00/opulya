@@ -4,6 +4,7 @@ import { FinanceController } from "./controller.js";
 import type { Database } from "./db.js";
 import type { LedgerService } from "./ledger.js";
 import type { ReportsService } from "./reports.js";
+import type { BudgetsService } from "./budgets.js";
 import type { InstrumentsService } from "./instruments.js";
 import type { PriceScheduler } from "./price-scheduler.js";
 import type { AuthRequest } from "./security.js";
@@ -18,6 +19,7 @@ describe("first price kicks after committed activity", () => {
         {} as Database,
         { investment } as unknown as LedgerService,
         {} as ReportsService,
+        {} as BudgetsService,
         {} as InstrumentsService,
         { requestRefresh } as unknown as PriceScheduler,
         {} as InstrumentDirectory,

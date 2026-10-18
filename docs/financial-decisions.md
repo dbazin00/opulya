@@ -26,6 +26,12 @@ Timestamps retain full precision. Reports use the user's timezone for day/month 
 
 Currencies are reported separately without automatic FX conversion. Negative cash is allowed for overdrafts/incomplete imports; short selling is rejected by replaying active investment history.
 
+## Monthly budgets
+
+Budgets are per user, category and currency. Repeating amounts take effect from a selected month until the next repeating change; monthly overrides take priority for that month only. A null amount skips a month or stops recurrence, while zero is a valid limit. Resetting a monthly override restores the repeating rule. No rollover or currency conversion is applied.
+
+Actuals derive from active income/expense ledger entries using the user's local month boundaries. Transfers, adjustments and investment trades are excluded. Parent actuals include all descendants; summary totals count only the outermost budgeted categories so nested plans are not added twice. Unbudgeted activity remains visible in total income/spending. Budget history prevents category deletion; archive instead. Category moves apply the current tree to historical reports, as in analytics.
+
 ## Investment activity
 
 Investment accounts are user-named, without predefined brokers or direct brokerage connections. Assets are private user references to shared catalogue instruments; pricing is independent of where the investment was purchased.

@@ -15,6 +15,7 @@ import {
   Menu,
   Plus,
   Library,
+  ChartPie,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useUser } from "./providers";
@@ -26,6 +27,7 @@ const links = [
   ["accounts", Wallet],
   ["transactions", ArrowLeftRight],
   ["analytics", ChartNoAxesCombined],
+  ["budgets", ChartPie],
   ["investments", TrendingUp],
   ["assets", Library],
   ["categories", Tags],
