@@ -32,7 +32,7 @@ Helmet and frontend headers supply CSP, frame denial, referrer and content-type 
 
 Public responses exclude password hashes, secrets and stack traces. Errors use stable localized codes; sensitive requests and credential-bearing provider URLs are not logged. Keep `.env` and protected secret files out of Git and deployment bundles.
 
-Market hosts are fixed, metadata/response parsing is bounded and validated, and provider errors are sanitized. Shared quotas and synchronization leases persist in PostgreSQL. Catalogue responses contain public instrument metadata, not private holdings. See [market data](alpha-vantage.md).
+Market requests use the server-only Yahoo client, metadata is validated, cached payloads are bounded, and errors are sanitized. Shared quotas and synchronization leases persist in PostgreSQL. Catalogue responses contain public instrument metadata, not private holdings. See [market data](market-data.md), including its public-redistribution restriction.
 
 ## Deployment responsibilities
 

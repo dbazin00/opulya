@@ -25,13 +25,10 @@ import { ReportsService } from "./reports.js";
 import { BudgetsService } from "./budgets.js";
 import { MarketDataService } from "./market.js";
 import {
-  MarketPriceSync,
   InstrumentProvider,
   InstrumentsService,
   MarketBudget,
 } from "./instruments.js";
-import { PriceScheduler } from "./price-scheduler.js";
-import { ReferenceCache } from "./reference-cache.js";
 import { InstrumentDirectory } from "./instrument-directory.js";
 import { MailService, mailSettingsSchema } from "./mail.js";
 loadEnv({
@@ -59,10 +56,7 @@ class HealthController {
     MarketBudget,
     InstrumentProvider,
     InstrumentsService,
-    MarketPriceSync,
-    ReferenceCache,
     InstrumentDirectory,
-    PriceScheduler,
   ],
 })
 export class AppModule {}
@@ -70,8 +64,19 @@ export async function bootstrap(port = Number(process.env.API_PORT ?? 4000)) {
   mailSettingsSchema.parse(process.env);
   sessionPolicySchema
     .extend({
-      MARKET_REQUESTS_PER_MINUTE: z.coerce.number().int().positive().default(8),
-      MARKET_REQUESTS_PER_DAY: z.coerce.number().int().positive().default(800),
+      MARKET_DATA_ENABLED: z.enum(["true", "false"]).default("true"),
+      MARKET_REQUESTS_PER_MINUTE: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(10000)
+        .default(30),
+      MARKET_REQUESTS_PER_DAY: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(100000)
+        .default(1000),
       TRUST_PROXY: z.enum(["true", "false"]).default("false"),
     })
     .parse(process.env);
@@ -179,10 +184,10 @@ export async function bootstrap(port = Number(process.env.API_PORT ?? 4000)) {
   );
   app.useGlobalFilters(new SafeErrors());
   app.use(
-    "/api/instruments/search",
+    "/api/instruments/directory",
     rateLimit({
-      windowMs: 15 * 60_000,
-      limit: 10,
+      windowMs: 60_000,
+      limit: 30,
       standardHeaders: "draft-8",
       legacyHeaders: false,
       message: { code: "RATE_LIMITED" },

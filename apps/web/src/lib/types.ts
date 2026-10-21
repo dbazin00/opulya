@@ -38,8 +38,10 @@ export interface Transaction extends LedgerTransaction {
 }
 export interface Asset {
   canDelete?: boolean;
-  priceConnected?: boolean;
   sourceSymbol?: string | null;
+  exchangeName?: string | null;
+  mic?: string;
+  isin?: string | null;
   id: string;
   symbol: string;
   name: string;
@@ -57,6 +59,7 @@ export interface Instrument {
   symbol: string;
   assetType: string;
   exchange: string;
+  exchangeName?: string | null;
   mic: string;
   currency: string;
   isin: string | null;
@@ -122,16 +125,16 @@ export interface Portfolio {
   assets: Asset[];
   quotes: {
     assetId: string;
-    refreshPending?: boolean;
     quote: {
-      kind?: "QUOTE" | "CLOSE";
+      kind?: "QUOTE";
       price: string;
       marketAt: string | null;
       fetchedAt: string;
       stale: boolean;
       delayed: boolean;
-      tradingDate?: string;
       provider?: string;
+      delayMinutes?: number | null;
+      marketState?: string | null;
     } | null;
     error: string | null;
   }[];

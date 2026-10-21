@@ -7,73 +7,57 @@ import { randomUUID } from "node:crypto";
 process.env.OPULYA_TEST = "1";
 process.env.NODE_ENV = "test";
 process.env.EMAIL_TRANSPORT = "test";
-process.env.ALPHA_VANTAGE_API_KEY = "fixture-not-a-real-key";
+process.env.MARKET_DATA_ENABLED = "true";
 process.env.DATABASE_URL = testDatabaseUrl();
 process.env.WEB_ORIGIN = "http://localhost:3000";
-if (new URL(process.env.DATABASE_URL).pathname !== "/opulya_test")
-  throw new Error("Dedicated test database required");
 const { bootstrap } = await import("../src/main.js");
 const { Database } = await import("../src/db.js");
 const { InstrumentProvider } = await import("../src/instruments.js");
-const { directoryTypes, referenceCacheId } =
-  await import("../src/reference-cache.js");
+const { directoryTypes } = await import("../src/yahoo-finance.js");
 
-test("Alpha Vantage reference directory and selected-instrument persistence", async (suite) => {
+test("Yahoo catalogue persists only selected, verified listings", async (suite) => {
   const app = await bootstrap(0),
     db = app.get(Database),
     url = await app.getUrl();
   const external = app.get(InstrumentProvider);
-  const cacheIds = directoryTypes.map(referenceCacheId);
-  await db.instrumentDirectoryCache.deleteMany({
-    where: { id: { in: cacheIds } },
-  });
   const users: string[] = [],
     cookies: string[] = [],
     ids: string[] = [];
   const prefix = `DIR${randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase()}`;
-  const common = {
+  const rows = directoryTypes.map((assetType) => ({
+    symbol:
+      assetType === "CRYPTO" ? `${prefix}COIN/EUR` : `${prefix}${assetType}.AS`,
     name: `Directory fixture ${prefix}`,
-    currency: "USD" as const,
-    exchange: "United States",
-    mic_code: "",
-    exchange_timezone: "America/New_York",
-  };
-  let searches = 0;
-  external.references = async (type) =>
-    type === "CRYPTO"
-      ? [
-          {
-            symbol: `${prefix}COIN/USD`,
-            currency_base: `Coin ${prefix}`,
-            available_exchanges: ["Alpha Vantage"],
-          },
-        ]
-      : [
-          {
-            ...common,
-            symbol: `${prefix}${type}`,
-            type:
-              type === "STOCK"
-                ? "Common Stock"
-                : type === "FUND"
-                  ? "Mutual Fund"
-                  : "ETF",
-          },
-        ];
-  external.search = async (symbol, assetType, currency) => {
+    assetType,
+    currency: "EUR",
+    exchange: assetType === "CRYPTO" ? "" : "AMS",
+    exchangeName: assetType === "CRYPTO" ? null : "Amsterdam",
+    mic: assetType === "CRYPTO" ? "" : "XAMS",
+    timeZone: "Europe/Amsterdam",
+    isin: null,
+  }));
+  const queries: string[] = [];
+  let searches = 0,
+    resolutions = 0;
+  external.search = async (search, type, currency) => {
     searches++;
-    return [
-      {
-        symbol,
-        name: common.name,
-        assetType: assetType!,
-        currency: currency!,
-        exchange: "United States",
-        mic: "",
-        timeZone: "America/New_York",
-        isin: null,
-      },
-    ];
+    queries.push(search);
+    return rows.filter(
+      (row) =>
+        (!type || row.assetType === type) &&
+        (!currency || row.currency === currency),
+    );
+  };
+  external.resolve = async (symbol, currency, type) => {
+    resolutions++;
+    const row = rows.find(
+      (row) =>
+        row.symbol.replace("/", "-") === symbol &&
+        row.currency === currency &&
+        row.assetType === type,
+    );
+    if (!row) throw new Error("MARKET_IDENTITY_MISMATCH");
+    return row;
   };
   const request = async (
     path: string,
@@ -120,31 +104,27 @@ test("Alpha Vantage reference directory and selected-instrument persistence", as
       users.push(signup.body.id);
       cookies.push(signup.cookie!);
     }
+    await suite.test(
+      "empty search has no starter assets and makes no external call",
+      async () => {
+        const result = await request("instruments/directory");
+        assert.equal(result.status, 200);
+        assert.deepEqual(result.body.items, []);
+        assert.equal(searches, 0);
+      },
+    );
     let choices: { id: string; assetType: string }[] = [];
     await suite.test(
-      "authenticated browse includes US stocks, ETFs and crypto without saving or pricing unused references",
+      "search includes European stocks, ETFs, funds and crypto without saving unused instruments",
       async () => {
-        let result = await request(
-          `instruments/directory?currency=USD&search=${prefix}`,
+        const result = await request(
+          `instruments/directory?currency=EUR&search=${prefix}`,
         );
-        for (
-          let i = 0;
-          i < 50 && (result.body.loading.length || result.body.items.length < 3);
-          i++
-        ) {
-          await new Promise((resolve) => setTimeout(resolve, 10));
-          result = await request(
-            `instruments/directory?currency=USD&search=${prefix}`,
-          );
-        }
         assert.equal(result.status, 200);
-        assert.deepEqual(result.body.loading, []);
-        assert.deepEqual(result.body.errors, []);
         choices = result.body.items;
-        assert.equal(choices.length, 3);
         assert.deepEqual(
           new Set(choices.map((row) => row.assetType)),
-          new Set(["STOCK", "ETF", "CRYPTO"]),
+          new Set(directoryTypes),
         );
         assert.equal(
           await db.instrument.count({
@@ -156,51 +136,12 @@ test("Alpha Vantage reference directory and selected-instrument persistence", as
           await db.asset.count({ where: { userId: { in: users } } }),
           0,
         );
-        assert.equal(searches, 0);
+        assert.equal(resolutions, 0);
       },
     );
     let owned = "";
     await suite.test(
-      "a restarted API restores available reference feeds without downloading feeds again",
-      async () => {
-        const restarted = await bootstrap(0);
-        const provider = restarted.get(InstrumentProvider);
-        let downloads = 0;
-        provider.references = async () => {
-          downloads++;
-          throw new Error("Unexpected provider call");
-        };
-        try {
-          const base = await restarted.getUrl();
-          const cookie = cookies[0];
-          assert.ok(cookie);
-          let body;
-          for (let i = 0; i < 50; i++) {
-            const response: Response = await fetch(
-              `${base}/api/instruments/directory?currency=USD&search=${prefix}`,
-              { headers: { Cookie: cookie } },
-            );
-            assert.equal(response.status, 200);
-            body = await response.json();
-            if (!body.loading.length) break;
-            await new Promise((resolve) => setTimeout(resolve, 10));
-          }
-          assert.equal(body.total, 3);
-          assert.deepEqual(body.errors, []);
-          assert.equal(downloads, 0);
-          assert.equal(
-            await db.instrumentDirectoryCache.count({
-              where: { id: { in: cacheIds } },
-            }),
-            3,
-          );
-        } finally {
-          await restarted.close();
-        }
-      },
-    );
-    await suite.test(
-      "selecting a referenced ETF queues its first price without another billed lookup",
+      "selection revalidates metadata and shares the verified Yahoo mapping",
       async () => {
         const selected = await request("assets", {
           instrumentId: choices.find((row) => row.assetType === "ETF")!.id,
@@ -208,84 +149,108 @@ test("Alpha Vantage reference directory and selected-instrument persistence", as
         assert.equal(selected.status, 201);
         owned = selected.body.id;
         ids.push(selected.body.instrumentId);
-        const item = await db.instrument.findUniqueOrThrow({
+        assert.equal(resolutions, 1);
+        const instrument = await db.instrument.findUniqueOrThrow({
           where: { id: ids[0] },
         });
-        assert.equal(item.assetType, "ETF");
-        assert.equal(item.mic, "");
-        assert.equal(item.timeZone, "America/New_York");
-        assert.equal(searches, 0);
+        assert.equal(instrument.currency, "EUR");
+        assert.equal(instrument.mic, "XAMS");
+        assert.equal(instrument.exchangeName, "Amsterdam");
+        const assets = await request("assets");
+        assert.equal(assets.body[0].exchangeName, "Amsterdam");
+        assert.equal(assets.body[0].mic, "XAMS");
+        assert.equal(assets.body[0].isin, null);
         assert.equal(
           await db.instrument.count({
             where: { symbol: { startsWith: prefix } },
           }),
           1,
         );
-        assert.ok(
+        assert.equal(
           (
             await db.instrumentMapping.findFirstOrThrow({
-              where: { instrumentId: item.id },
+              where: { instrumentId: instrument.id },
             })
-          ).currentRequestedAt,
-        );
-        assert.equal(
-          await db.latestPrice.count({ where: { instrumentId: item.id } }),
-          0,
+          ).provider,
+          "Yahoo Finance",
         );
       },
     );
     await suite.test(
-      "hides only the logged-in user's assets without leaking shared-cache ownership",
+      "ownership filtering is private and another user's asset shares the instrument",
       async () => {
-        const path = `instruments/directory?currency=USD&search=${prefix}&assetType=ETF`;
-        const own = await request(path);
+        const path = `instruments/directory?currency=EUR&search=${prefix}&assetType=ETF`;
+        const own = await request(path),
+          other = await request(path, undefined, cookies[1]);
         assert.equal(own.body.total, 0);
         assert.equal(own.body.ownedCount, 1);
-        assert.equal(own.body.hasMore, false);
-        const other = await request(path, undefined, cookies[1]);
         assert.equal(other.body.total, 1);
         assert.equal(other.body.ownedCount, 0);
-        assert.equal((await request(`${path}&mode=match`)).status, 400);
-        assert.equal(
-          (
-            await request("instruments/search", {
-              search: `${prefix}ETF`,
-              currency: "USD",
-              assetType: "ETF",
-            })
-          ).body.length,
-          0,
+        const selected = await request(
+          "assets",
+          { instrumentId: other.body.items[0].id },
+          cookies[1],
         );
-        assert.equal(searches, 0);
-        const repeat = await request("assets", { instrumentId: ids[0] });
-        assert.equal(repeat.body.id, owned);
+        assert.equal(selected.body.instrumentId, ids[0]);
+        assert.equal(
+          (await request("assets", { instrumentId: ids[0] })).body.id,
+          owned,
+        );
+      },
+    );
+    await suite.test(
+      "free-text searches reach the provider unchanged without asserting ISIN identity",
+      async () => {
+        for (const search of [
+          "World fund",
+          "IWDA.AS",
+          "BTC/EUR",
+          "S&P 500",
+          "IE00B4L5Y983",
+          "IE00B4L5Y984",
+          "LIVE12345678",
+        ]) {
+          const result = await request(
+            `instruments/directory?search=${encodeURIComponent(search)}&currency=EUR`,
+          );
+          assert.equal(result.status, 200, JSON.stringify(result.body));
+          assert.equal(queries.at(-1), search);
+        }
+        assert.equal(
+          (await db.instrument.findUniqueOrThrow({ where: { id: ids[0] } }))
+            .isin,
+          null,
+        );
         assert.equal(await db.asset.count({ where: { userId: users[0] } }), 1);
       },
     );
     await suite.test(
-      "rejects foreign remapping before any provider lookup",
+      "selection accepts only the verified listing ID, not obsolete matching details",
       async () => {
-        const result = await request(
-          `assets/${owned}/instrument`,
-          {
-            instrumentId: choices.find((row) => row.assetType === "STOCK")!.id,
+        const result = await request("assets", {
+          instrumentId: ids[0],
+          matching: {
+            search: "IWDA",
+            exchange: "AEB",
+            currency: "EUR",
+            confirmed: true,
           },
-          cookies[1],
-          "PATCH",
-        );
-        assert.equal(result.status, 404);
-        assert.equal(searches, 0);
+        });
+        assert.equal(result.status, 400);
         assert.equal(
-          await db.instrument.count({
-            where: { symbol: { startsWith: prefix } },
-          }),
-          1,
+          (await request("assets", { instrumentId: ids[0] })).status,
+          201,
         );
       },
     );
     await suite.test(
-      "rejects forged references, anonymous browsing and malformed queries",
+      "rejects forged metadata, old reference IDs, unauthenticated and malformed queries",
       async () => {
+        assert.equal(
+          (await request("assets", { instrumentId: `yf:ETF:EUR:FORGED.AS` }))
+            .status,
+          503,
+        );
         assert.equal(
           (
             await request("assets", {
@@ -293,6 +258,16 @@ test("Alpha Vantage reference directory and selected-instrument persistence", as
             })
           ).status,
           404,
+        );
+        assert.equal(
+          (
+            await request("assets", {
+              instrumentId: ids[0],
+              name: "Injected",
+              price: "1",
+            })
+          ).status,
+          400,
         );
         assert.equal(
           (await request("instruments/directory", undefined, "")).status,
@@ -309,21 +284,31 @@ test("Alpha Vantage reference directory and selected-instrument persistence", as
             (await request(`instruments/directory?${query}`)).status,
             400,
           );
-        assert.equal(
-          (await request(`instruments/directory?currency=EUR&search=${prefix}`))
-            .body.total,
-          0,
-        );
+      },
+    );
+    await suite.test("removed catalogue aliases are unavailable", async () => {
+      assert.equal((await request("instruments")).status, 404);
+      assert.equal(
+        (await request("instruments/search", { search: prefix })).status,
+        404,
+      );
+    });
+    await suite.test(
+      "provider throttling returns a sanitized error and never persists an invalid asset",
+      async () => {
+        external.search = async () => {
+          throw new Error("MARKET_RATE_LIMIT");
+        };
+        const result = await request(`instruments/directory?search=${prefix}`);
+        assert.equal(result.status, 503);
+        assert.equal(result.body.code, "MARKET_RATE_LIMIT");
+        assert.equal(await db.asset.count({ where: { userId: users[0] } }), 1);
       },
     );
   } finally {
     await db.asset.deleteMany({ where: { userId: { in: users } } });
     await db.user.deleteMany({ where: { id: { in: users } } });
     await db.instrument.deleteMany({ where: { id: { in: ids } } });
-    await db.instrumentDirectoryCache.deleteMany({
-      where: { id: { in: cacheIds } },
-    });
-    await db.marketJob.deleteMany({ where: { id: { in: cacheIds } } });
     await app.close();
   }
 });

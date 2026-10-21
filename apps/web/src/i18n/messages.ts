@@ -71,7 +71,7 @@ export const en = {
       "No. You add balances and activity manually. Opulya organizes your records; it does not move your money or place trades.",
     faqPrices: "Are investment prices live?",
     faqPricesBody:
-      "No. Available market prices are refreshed on a daily schedule and may be delayed. You can see the price date, and not every instrument is covered. Your broker remains the source for trading decisions.",
+      "No. Available market prices refresh approximately every minute while you view them and may be delayed. Quote times are shown, and not every instrument is covered. Your broker remains the source for trading decisions.",
     faqCategories: "Can I create my own categories?",
     faqCategoriesBody:
       "Yes. Start with your own income and expense categories, add as many nested subcategories as you need, and explore them in analytics.",
@@ -341,7 +341,8 @@ export const en = {
     achieved: "Target reached",
     progress: "{name}: {actual} of {amount}",
     removeConfirm: "Remove this month's budget? Other months stay unchanged.",
-    stopConfirm: "Stop repeating from this month? Earlier months and individual month overrides stay unchanged.",
+    stopConfirm:
+      "Stop repeating from this month? Earlier months and individual month overrides stay unchanged.",
   },
   assets: {
     title: "Assets",
@@ -349,8 +350,7 @@ export const en = {
     search: "Search assets",
     asset: "Asset",
     unitPrice: "Unit price",
-    priceDate: "Price date",
-    notUpdated: "Not updated yet",
+    priceDate: "Price time",
     empty: "No assets yet",
     noMatches: "No assets match these filters",
     deleteNamed: "Delete {name}",
@@ -358,10 +358,10 @@ export const en = {
     deleteDescription:
       "Permanently remove {name} from your asset library? Shared market data is kept. This cannot be undone.",
     schedule:
-      "Daily price refresh starts at 12:00 UTC. Securities use the latest completed daily close. Quotes may be delayed.",
+      "Latest available prices refresh approximately every minute while this page is open. Quotes may be delayed.",
   },
   marketData: {
-    credit: "Data provided by <provider>Alpha Vantage</provider>",
+    credit: "Data provided by <provider>Yahoo Finance</provider>",
   },
   analytics: {
     title: "Analytics",
@@ -382,8 +382,23 @@ export const en = {
     root: "All categories",
     selectedDay: "Activity on {date}",
   },
+  listing: {
+    tradingCurrency: "Trading currency",
+    tradesIn: "Trades in {currency}",
+    details: "Listing details",
+    yahooSymbol: "Yahoo symbol",
+    exchangeCode: "Exchange code",
+    mic: "Market identifier (MIC)",
+    isin: "ISIN",
+  },
   investments: {
     title: "Investments",
+    quoteRefresh:
+      "Latest available quotes · refresh every minute while viewing",
+    priceAsOf: "Price as of {date}",
+    retrievedAt: "Retrieved {date}",
+    marketClosed: "Market closed",
+    delayMinutes: "Provider delay: {minutes, number} min",
     subtitle: "A considered view of your portfolio.",
     add: "Record activity",
     addAsset: "Add asset",
@@ -400,11 +415,7 @@ export const en = {
     dividends: "Dividends received",
     totalInvested: "Purchases incl. fees",
     costBasis: "Remaining cost incl. fees",
-    return: "Return",
-    symbol: "Symbol",
-    exchange: "Exchange",
     assetType: "Asset type",
-    identifier: "Market data symbol",
     asset: "Asset",
     pricePerUnit: "Price per unit",
     totalAmount: "Gross amount",
@@ -415,12 +426,9 @@ export const en = {
     funding: "Investment funding",
     voidFundingBody:
       "Both the investment activity and its linked funding transfer will be voided. Original records are retained. Later sales must remain covered.",
-    lastUpdated: "Fetched {date}",
-    marketAt: "Market timestamp: {date}",
     delayed: "Market data may be delayed",
     stale: "Stale price",
     unavailable: "Market price unavailable",
-    notConfigured: "Market data is not configured.",
     noAccounts: "Add an investment account to begin",
     noHoldings: "No holdings yet",
     activity: "Investment activity",
@@ -434,11 +442,9 @@ export const en = {
     negativeCash:
       "Cash is negative. Record missing funding or correct the activity.",
     selectAccount: "Select an investment account",
-    priceStatus: "Price status",
-    searchInstrument: "Search by name or symbol",
-    searchProvider: "Search Alpha Vantage",
+    searchInstrument: "Search by name, symbol or ISIN",
+    startSearch: "Enter at least 2 characters to search Yahoo Finance",
     searchResults: "Matching instruments",
-    loadingCatalogue: "Loading market catalogue",
     instrumentCount:
       "{count, plural, one {# instrument} other {# instruments}}",
     resultsPage: "Page {page, number}",
@@ -446,10 +452,7 @@ export const en = {
     nextResults: "Next results",
     noInstruments: "No matching instruments in the catalogue",
     alreadyAdded: "You already have all matching assets",
-    selectInstrument: "Use selected instrument",
-    dailyClose: "Daily closing prices",
     fetchingPrice: "Fetching price",
-    closeDate: "Latest close: {date}",
   },
   settings: {
     title: "Settings",
@@ -536,19 +539,14 @@ export const en = {
     EMAIL_DELIVERY_FAILED:
       "Email delivery is temporarily unavailable. Please try again later.",
     MARKET_UNAVAILABLE: "Market data is temporarily unavailable.",
-    MARKET_PLAN_REQUIRED:
-      "Your market-data plan does not include prices for this listing.",
     ASSET_HAS_TRANSACTIONS:
       "This asset has investment history and cannot be deleted.",
     MARKET_SYMBOL_NOT_FOUND:
       "The market-data provider could not find this exact listing.",
-    MARKET_PRICE_PENDING: "The market price is pending an update.",
     MARKET_NOT_CONFIGURED: "Market data is not configured.",
     MARKET_UNMAPPED: "This asset has no verified market-data reference.",
     MARKET_AUTH_FAILED:
-      "The market-data API key was rejected. Check the server configuration.",
-    MARKET_ACCESS_DENIED:
-      "The market-data provider does not allow access to this instrument on the configured plan.",
+      "The market-data provider rejected access. Please try again later.",
     MARKET_RATE_LIMIT:
       "Market data rate limit reached. Existing prices are retained.",
     MARKET_IDENTITY_MISMATCH:
@@ -629,7 +627,7 @@ export const hr: typeof en = {
       "Ne. Stanja i aktivnosti unosite ručno. Opulya organizira vaše zapise; ne prenosi novac i ne izvršava naloge za trgovanje.",
     faqPrices: "Jesu li cijene ulaganja dostupne uživo?",
     faqPricesBody:
-      "Ne. Dostupne tržišne cijene osvježavaju se prema dnevnom rasporedu i mogu kasniti. Prikazan je datum cijene, a nisu pokriveni svi instrumenti. Za odluke o trgovanju provjerite podatke svojeg brokera.",
+      "Ne. Dostupne tržišne cijene osvježavaju se približno svake minute tijekom pregleda i mogu kasniti. Prikazano je vrijeme kotacije, a nisu pokriveni svi instrumenti. Za odluke o trgovanju provjerite podatke svojeg brokera.",
     faqCategories: "Mogu li oblikovati vlastite kategorije?",
     faqCategoriesBody:
       "Da. Izradite vlastite kategorije prihoda i rashoda, dodajte koliko god razina potkategorija trebate i istražujte ih u analitici.",
@@ -900,8 +898,10 @@ export const hr: typeof en = {
     over: "Budžet premašen",
     achieved: "Cilj ostvaren",
     progress: "{name}: {actual} od {amount}",
-    removeConfirm: "Ukloniti budžet za ovaj mjesec? Ostali mjeseci ostaju nepromijenjeni.",
-    stopConfirm: "Zaustaviti ponavljanje od ovog mjeseca? Prethodni mjeseci i pojedinačne mjesečne iznimke ostaju nepromijenjeni.",
+    removeConfirm:
+      "Ukloniti budžet za ovaj mjesec? Ostali mjeseci ostaju nepromijenjeni.",
+    stopConfirm:
+      "Zaustaviti ponavljanje od ovog mjeseca? Prethodni mjeseci i pojedinačne mjesečne iznimke ostaju nepromijenjeni.",
   },
   assets: {
     title: "Instrumenti",
@@ -909,8 +909,7 @@ export const hr: typeof en = {
     search: "Pretraži instrumente",
     asset: "Instrument",
     unitPrice: "Jedinična cijena",
-    priceDate: "Datum cijene",
-    notUpdated: "Još nije ažurirano",
+    priceDate: "Vrijeme cijene",
     empty: "Još nema instrumenata",
     noMatches: "Nema instrumenata za odabrane filtre",
     deleteNamed: "Obriši {name}",
@@ -918,10 +917,10 @@ export const hr: typeof en = {
     deleteDescription:
       "Trajno ukloniti {name} iz vaše zbirke instrumenata? Zajednički tržišni podaci ostaju sačuvani. Ova radnja ne može se poništiti.",
     schedule:
-      "Dnevno osvježavanje cijena započinje u 12:00 UTC. Vrijednosnice koriste posljednju zaključnu dnevnu cijenu. Kotacije mogu kasniti.",
+      "Posljednje dostupne cijene osvježavaju se približno svake minute dok je stranica otvorena. Kotacije mogu kasniti.",
   },
   marketData: {
-    credit: "Podatke pruža <provider>Alpha Vantage</provider>",
+    credit: "Podatke pruža <provider>Yahoo Finance</provider>",
   },
   analytics: {
     title: "Analitika",
@@ -942,8 +941,23 @@ export const hr: typeof en = {
     root: "Sve kategorije",
     selectedDay: "Aktivnosti {date}",
   },
+  listing: {
+    tradingCurrency: "Valuta trgovanja",
+    tradesIn: "Trguje se u {currency}",
+    details: "Detalji instrumenta",
+    yahooSymbol: "Yahoo oznaka",
+    exchangeCode: "Oznaka burze",
+    mic: "Oznaka tržišta (MIC)",
+    isin: "ISIN",
+  },
   investments: {
     title: "Ulaganja",
+    quoteRefresh:
+      "Posljednje dostupne cijene · osvježavanje svake minute tijekom pregleda",
+    priceAsOf: "Cijena na dan {date}",
+    retrievedAt: "Dohvaćeno {date}",
+    marketClosed: "Tržište je zatvoreno",
+    delayMinutes: "Kašnjenje podataka: {minutes, number} min",
     subtitle: "Promišljen pregled vašeg portfelja.",
     add: "Zabilježi aktivnost",
     addAsset: "Dodaj instrument",
@@ -960,11 +974,7 @@ export const hr: typeof en = {
     dividends: "Primljene dividende",
     totalInvested: "Kupnje s naknadama",
     costBasis: "Preostali trošak s naknadama",
-    return: "Prinos",
-    symbol: "Oznaka",
-    exchange: "Burza",
     assetType: "Vrsta instrumenta",
-    identifier: "Oznaka za tržišne podatke",
     asset: "Instrument",
     pricePerUnit: "Cijena po jedinici",
     totalAmount: "Bruto iznos",
@@ -975,12 +985,9 @@ export const hr: typeof en = {
     funding: "Financiranje ulaganja",
     voidFundingBody:
       "Investicijska aktivnost i povezani prijenos bit će stornirani zajedno. Izvorni zapisi ostaju sačuvani. Kasnije prodaje moraju ostati pokrivene.",
-    lastUpdated: "Dohvaćeno {date}",
-    marketAt: "Vrijeme tržišne cijene: {date}",
     delayed: "Tržišni podaci mogu kasniti",
     stale: "Zastarjela cijena",
     unavailable: "Tržišna cijena nije dostupna",
-    notConfigured: "Tržišni podaci nisu konfigurirani.",
     noAccounts: "Dodajte investicijski račun za početak",
     noHoldings: "Još nema pozicija",
     activity: "Investicijske aktivnosti",
@@ -994,11 +1001,9 @@ export const hr: typeof en = {
     negativeCash:
       "Novčano stanje je negativno. Zabilježite nedostajuću uplatu ili ispravite aktivnost.",
     selectAccount: "Odaberite investicijski račun",
-    priceStatus: "Status cijene",
-    searchInstrument: "Pretraži po nazivu ili oznaci",
-    searchProvider: "Pretraži Alpha Vantage",
+    searchInstrument: "Pretraži po nazivu, oznaci ili ISIN-u",
+    startSearch: "Unesite barem 2 znaka za pretraživanje Yahoo Financea",
     searchResults: "Pronađeni instrumenti",
-    loadingCatalogue: "Učitavanje tržišnog kataloga",
     instrumentCount:
       "{count, plural, one {# instrument} few {# instrumenta} other {# instrumenata}}",
     resultsPage: "Stranica {page, number}",
@@ -1006,10 +1011,7 @@ export const hr: typeof en = {
     nextResults: "Sljedeći rezultati",
     noInstruments: "Nema odgovarajućih instrumenata u katalogu",
     alreadyAdded: "Već imate sve odgovarajuće instrumente",
-    selectInstrument: "Koristi odabrani instrument",
-    dailyClose: "Dnevne zaključne cijene",
     fetchingPrice: "Dohvaćanje cijene",
-    closeDate: "Posljednja zaključna cijena: {date}",
   },
   settings: {
     title: "Postavke",
@@ -1098,20 +1100,15 @@ export const hr: typeof en = {
     EMAIL_DELIVERY_FAILED:
       "Slanje e-maila trenutačno nije dostupno. Pokušajte ponovno kasnije.",
     MARKET_UNAVAILABLE: "Tržišni podaci trenutačno nisu dostupni.",
-    MARKET_PLAN_REQUIRED:
-      "Vaš plan tržišnih podataka ne uključuje cijene za ovu kotaciju.",
     ASSET_HAS_TRANSACTIONS:
       "Ovaj instrument ima povijest ulaganja i ne može se obrisati.",
     MARKET_SYMBOL_NOT_FOUND:
       "Pružatelj tržišnih podataka nije pronašao ovu točnu kotaciju.",
-    MARKET_PRICE_PENDING: "Tržišna cijena čeka ažuriranje.",
     MARKET_NOT_CONFIGURED: "Tržišni podaci nisu konfigurirani.",
     MARKET_UNMAPPED:
       "Ovaj instrument nema potvrđenu referencu za tržišne podatke.",
     MARKET_AUTH_FAILED:
-      "API ključ za tržišne podatke je odbijen. Provjerite konfiguraciju poslužitelja.",
-    MARKET_ACCESS_DENIED:
-      "Pružatelj tržišnih podataka ne dopušta pristup ovom instrumentu u konfiguriranom paketu.",
+      "Pružatelj tržišnih podataka odbio je pristup. Pokušajte ponovno kasnije.",
     MARKET_RATE_LIMIT:
       "Dosegnuto je ograničenje tržišnih podataka. Postojeće cijene su sačuvane.",
     MARKET_IDENTITY_MISMATCH:

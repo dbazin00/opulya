@@ -6,9 +6,10 @@ The active schema starts with `prisma/migrations/0_init/migration.sql`. `migrati
 
 `20261017120000_email_send_limits` adds shared verification-email counters without changing existing records. Apply pending migrations before deploying the corresponding API; never rewrite an already deployed baseline.
 
-The SQL includes four checks not represented by Prisma's datamodel:
+`20261021120000_on_demand_quotes` removes the disposable price cache and obsolete scheduler fields. It preserves accounts, assets and investment history; no database reset is needed.
 
-- `LatestPrice_price_positive`: market prices must be positive.
+The final schema includes three checks not represented by Prisma's datamodel:
+
 - `Transaction_hidden_balance_only`: only adjustments can be hidden.
 - `Transaction_opening_balance_only`: opening entries must be visible adjustments.
 - `InvestmentTransaction_no_self_correction`: an activity cannot replace itself.

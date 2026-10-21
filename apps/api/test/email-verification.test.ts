@@ -9,7 +9,7 @@ process.env.NODE_ENV = "test";
 process.env.EMAIL_TRANSPORT = "test";
 process.env.EMAIL_SENDS_PER_HOUR = "10000";
 process.env.EMAIL_SENDS_PER_DAY = "10000";
-process.env.ALPHA_VANTAGE_API_KEY = "";
+process.env.MARKET_DATA_ENABLED = "false";
 process.env.DATABASE_URL = testDatabaseUrl();
 process.env.WEB_ORIGIN = "http://localhost:3000";
 if (new URL(process.env.DATABASE_URL).pathname !== "/opulya_test")

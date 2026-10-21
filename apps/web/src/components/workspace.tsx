@@ -1,6 +1,6 @@
 "use client";
 import { Dropdown } from "./dropdown";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -25,6 +25,7 @@ import {
   resolveLocale,
 } from "@opulya/shared";
 import { api, queryString } from "@/lib/api";
+import { useVisible } from "@/lib/use-visible";
 import type {
   Account,
   Analytics,
@@ -64,23 +65,6 @@ import { CategoriesView } from "./categories-view";
 import { AssetsView } from "./assets-view";
 import { BudgetsView } from "./budgets-view";
 
-export function useVisible() {
-  const [active, setActive] = useState(true);
-  useEffect(() => {
-    const update = () =>
-      setActive(document.visibilityState === "visible" && navigator.onLine);
-    update();
-    document.addEventListener("visibilitychange", update);
-    window.addEventListener("online", update);
-    window.addEventListener("offline", update);
-    return () => {
-      document.removeEventListener("visibilitychange", update);
-      window.removeEventListener("online", update);
-      window.removeEventListener("offline", update);
-    };
-  }, []);
-  return active;
-}
 export function useMonth() {
   const user = useUser();
   return useState(() => {
@@ -281,10 +265,23 @@ function Dashboard({
 }) {
   const t = useTranslations();
   const visible = useVisible();
+  const loaded = useRef(new Set<string>());
   const overview = useQuery({
     queryKey: ["overview", currency],
-    queryFn: () => api<Overview>(`overview?currency=${currency}`),
-    refetchInterval: priceRefreshInterval(visible, true),
+    queryFn: () => {
+      const background = loaded.current.has(currency);
+      loaded.current.add(currency);
+      return api<Overview>(`overview?currency=${currency}`, undefined, "POST", {
+        background,
+      });
+    },
+    enabled: visible,
+    refetchInterval: accounts.some(
+      (account) =>
+        account.type === "INVESTMENT" && account.currency === currency,
+    )
+      ? priceRefreshInterval(visible, true)
+      : false,
     refetchIntervalInBackground: false,
   });
   const analytics = useQuery({

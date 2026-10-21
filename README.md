@@ -18,7 +18,7 @@ npm run db:migrate
 npm run dev
 ```
 
-Do not overwrite an existing `.env`. Configure `RESEND_API_KEY` and `EMAIL_FROM` for signup, and `ALPHA_VANTAGE_API_KEY` for market prices. Restart the API after changing environment values.
+Do not overwrite an existing `.env`. Configure `RESEND_API_KEY` and `EMAIL_FROM` for signup. Yahoo Finance needs no API key; see the market-data deployment restrictions below. Restart the API after changing environment values.
 
 Open [localhost:3000](http://localhost:3000). The API uses port 4000; local PostgreSQL uses port 5434. No users, categories or personal financial data are seeded.
 
@@ -51,7 +51,7 @@ Run the API and web app as separate services. Compose supplies local PostgreSQL 
 
 - [Database credentials and test setup](docs/database-credentials.md)
 - [Email verification](docs/email-verification.md)
-- [Market data and provider limits](docs/alpha-vantage.md)
+- [Market data and deployment restrictions](docs/market-data.md)
 - [Financial calculations](docs/financial-decisions.md)
 - [Security controls and deployment requirements](docs/security.md)
 - [Migrations](docs/migrations.md)

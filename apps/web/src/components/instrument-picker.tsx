@@ -2,30 +2,28 @@
 import { Fragment, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { Check, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  RefreshCw,
+} from "lucide-react";
 import { currencies } from "@opulya/shared";
 import { Dropdown } from "./dropdown";
 import { MarketDataCredit } from "./market-data-credit";
-import { api, ApiError } from "@/lib/api";
+import { AssetListing } from "./asset-listing";
+import { api } from "@/lib/api";
 import type { Asset, Instrument } from "@/lib/types";
-import {
-  Button,
-  Empty,
-  ErrorNotice,
-  Field,
-  IconButton,
-  Loading,
-  Spinner,
-} from "./ui";
-const types = ["STOCK", "ETF", "CRYPTO", "FUND"];
+import { Button, Empty, ErrorNotice, Field, IconButton, Loading } from "./ui";
+
+const types = ["STOCK", "ETF", "CRYPTO", "FUND"] as const;
 type Directory = {
   items: Instrument[];
   total: number;
   ownedCount: number;
   page: number;
   hasMore: boolean;
-  loading: string[];
-  errors: { type: string; code: string }[];
 };
 
 export function InstrumentPicker({
@@ -41,53 +39,28 @@ export function InstrumentPicker({
   const client = useQueryClient();
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
-  const [settled, setSettled] = useState("");
   const [selected, setSelected] = useState<Instrument | null>(null);
   const [assetType, setAssetType] = useState(
-    initialType && types.includes(initialType) ? initialType : "",
+    initialType && types.some((type) => type === initialType)
+      ? initialType
+      : "",
   );
-  const [chosenCurrency, setCurrency] = useState(currency ?? "EUR");
+  const [chosenCurrency, setCurrency] = useState<(typeof currencies)[number]>(
+    currencies.find((value) => value === currency) ?? "EUR",
+  );
   const [page, setPage] = useState(0);
   useEffect(() => {
-    const timer = setTimeout(() => setQuery(search.trim()), 300);
-    const providerTimer = setTimeout(() => setSettled(search.trim()), 900);
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(providerTimer);
-    };
+    const timer = setTimeout(() => setQuery(search.trim()), 400);
+    return () => clearTimeout(timer);
   }, [search]);
+  const current = query === search.trim();
   const catalogue = useQuery({
     queryKey: ["instrument-directory", query, chosenCurrency, assetType, page],
     queryFn: () =>
       api<Directory>(
         `instruments/directory?search=${encodeURIComponent(query)}&currency=${chosenCurrency}&page=${page}${assetType ? `&assetType=${assetType}` : ""}`,
       ),
-    refetchInterval: (state) =>
-      state.state.data?.loading.length ? 2000 : false,
-    refetchIntervalInBackground: false,
-    retry: false,
-  });
-  const discovery = useQuery({
-    queryKey: [
-      "instrument-discovery",
-      query.toUpperCase(),
-      assetType,
-      chosenCurrency,
-    ],
-    queryFn: () =>
-      api<Instrument[]>("instruments/search", {
-        search: query,
-        ...(assetType ? { assetType } : {}),
-        currency: chosenCurrency,
-      }),
-    enabled:
-      query.length >= 3 &&
-      query === search.trim() &&
-      settled === query &&
-      catalogue.isSuccess &&
-      !catalogue.data.loading.length &&
-      !catalogue.data.ownedCount &&
-      catalogue.data.items.length === 0,
+    enabled: query.length >= 2 && current,
     staleTime: 86400000,
     gcTime: 1800000,
     retry: false,
@@ -101,28 +74,20 @@ export function InstrumentPicker({
       onDone(asset);
     },
   });
-  const current = query === search.trim();
-  const result = catalogue.data?.items.length
-    ? catalogue.data.items
-    : catalogue.data?.ownedCount
-      ? []
-      : (discovery.data ?? []);
-  const rows = current
-    ? result.filter(
-        (row) =>
-          (!assetType || row.assetType === assetType) &&
-          row.currency === chosenCurrency,
-      )
-    : [];
+  const resetSelection = () => {
+    setSelected(null);
+    save.reset();
+  };
+  const rows =
+    current && query.length >= 2
+      ? (catalogue.data?.items ?? []).filter(
+          (row) =>
+            (!assetType || row.assetType === assetType) &&
+            row.currency === chosenCurrency,
+        )
+      : [];
   const searching =
-    !current ||
-    catalogue.isFetching ||
-    discovery.isFetching ||
-    (query.length >= 3 &&
-      !rows.length &&
-      !catalogue.data?.loading.length &&
-      settled !== query);
-  const directoryError = catalogue.data?.errors[0];
+    search.trim().length >= 2 && (!current || catalogue.isFetching);
   return (
     <div className="instrument-picker">
       <div className="instrument-filters">
@@ -131,9 +96,10 @@ export function InstrumentPicker({
             <Dropdown
               id={id}
               value={assetType}
+              disabled={save.isPending}
               onValueChange={(value) => {
                 setAssetType(value);
-                setSelected(null);
+                resetSelection();
                 setPage(0);
               }}
             >
@@ -146,15 +112,17 @@ export function InstrumentPicker({
             </Dropdown>
           )}
         </Field>
-        <Field label={t("common.currency")}>
+        <Field label={t("listing.tradingCurrency")}>
           {(id) => (
             <Dropdown
               id={id}
               value={chosenCurrency}
-              disabled={!!currency}
+              disabled={!!currency || save.isPending}
               onValueChange={(value) => {
-                setCurrency(value);
-                setSelected(null);
+                setCurrency(
+                  currencies.find((currency) => currency === value) ?? "EUR",
+                );
+                resetSelection();
                 setPage(0);
               }}
             >
@@ -173,52 +141,37 @@ export function InstrumentPicker({
             value={search}
             maxLength={80}
             autoFocus
+            disabled={save.isPending}
             onChange={(e) => {
               setSearch(e.target.value);
-              setSelected(null);
+              resetSelection();
               setPage(0);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
                 setQuery(search.trim());
-                setSettled(search.trim());
               }
             }}
           />
         )}
       </Field>
-      <ErrorNotice
-        error={
-          save.error ||
-          discovery.error ||
-          catalogue.error ||
-          (directoryError && new ApiError(directoryError.code, 503))
-        }
-      />
-      {(directoryError || discovery.isError) && current && (
+      <ErrorNotice error={catalogue.error} />
+      {catalogue.isError && current && (
         <IconButton
           label={t("common.refresh")}
-          busy={catalogue.isFetching || discovery.isFetching}
+          busy={catalogue.isFetching}
           onClick={() => {
             catalogue.refetch();
-            if (discovery.isError) discovery.refetch();
           }}
         >
           <RefreshCw size={16} />
         </IconButton>
       )}
-      {!!catalogue.data?.loading.length && (
-        <Spinner
-          label={t("investments.loadingCatalogue")}
-          showLabel
-          className="instrument-progress"
-        />
-      )}
       <div
         className="instrument-results"
         aria-live="polite"
-        aria-busy={searching || !!catalogue.data?.loading.length}
+        aria-busy={searching}
       >
         {searching && !rows.length ? (
           <Loading />
@@ -236,34 +189,27 @@ export function InstrumentPicker({
                     <li key={instrument.id}>
                       <button
                         type="button"
+                        disabled={save.isPending}
                         aria-pressed={selected?.id === instrument.id}
                         className={
                           selected?.id === instrument.id ? "selected" : ""
                         }
-                        onClick={() => setSelected(instrument)}
+                        onClick={() => {
+                          setSelected(instrument);
+                          save.reset();
+                        }}
                       >
-                        <span>
-                          <strong>
-                            {type === "CRYPTO"
-                              ? instrument.name
-                              : instrument.symbol}
-                          </strong>
-                          <span>
-                            {type === "CRYPTO"
-                              ? instrument.symbol.split("/")[0]
-                              : instrument.name}
-                          </span>
-                          <small>
-                            {t(`types.${type}`)}
-                            {type !== "CRYPTO"
-                              ? ` · ${instrument.exchange || t("common.none")}${instrument.mic ? ` · ${instrument.mic}` : ""}`
-                              : ""}{" "}
-                            · {instrument.currency}
-                          </small>
-                        </span>
-                        {selected?.id === instrument.id && (
-                          <Check size={18} aria-hidden />
-                        )}
+                        <AssetListing listing={instrument} />
+                        <Check
+                          size={18}
+                          aria-hidden
+                          style={{
+                            visibility:
+                              selected?.id === instrument.id
+                                ? "visible"
+                                : "hidden",
+                          }}
+                        />
                       </button>
                     </li>
                   ))}
@@ -271,17 +217,19 @@ export function InstrumentPicker({
               );
             })}
           </ul>
-        ) : !catalogue.data?.loading.length ? (
+        ) : (
           <Empty
             title={t(
-              catalogue.data?.ownedCount
-                ? "investments.alreadyAdded"
-                : "investments.noInstruments",
+              query.length < 2
+                ? "investments.startSearch"
+                : catalogue.data?.ownedCount
+                  ? "investments.alreadyAdded"
+                  : "investments.noInstruments",
             )}
           />
-        ) : null}
+        )}
       </div>
-      {catalogue.data && (
+      {query.length >= 2 && current && catalogue.data && (
         <div className="instrument-pagination">
           <span>
             {t("investments.instrumentCount", { count: catalogue.data.total })}
@@ -289,20 +237,22 @@ export function InstrumentPicker({
           <span>{t("investments.resultsPage", { page: page + 1 })}</span>
           <IconButton
             label={t("investments.previousResults")}
-            disabled={!page || catalogue.isFetching}
+            disabled={!page || catalogue.isFetching || save.isPending}
             onClick={() => {
               setPage(page - 1);
-              setSelected(null);
+              resetSelection();
             }}
           >
             <ChevronLeft size={18} />
           </IconButton>
           <IconButton
             label={t("investments.nextResults")}
-            disabled={!catalogue.data.hasMore || catalogue.isFetching}
+            disabled={
+              !catalogue.data.hasMore || catalogue.isFetching || save.isPending
+            }
             onClick={() => {
               setPage(page + 1);
-              setSelected(null);
+              resetSelection();
             }}
           >
             <ChevronRight size={18} />
@@ -310,24 +260,16 @@ export function InstrumentPicker({
         </div>
       )}
       {!!rows.length && <MarketDataCredit />}
-      {selected && (
-        <p className="muted">
-          {selected.name} ·{" "}
-          {selected.assetType === "CRYPTO"
-            ? t("types.CRYPTO")
-            : selected.exchange}{" "}
-          · {selected.currency}
-        </p>
-      )}
+      <ErrorNotice error={save.error} />
       <div className="form-footer">
         <Button
           type="button"
-          disabled={!selected}
+          disabled={!selected || !current || searching}
           busy={save.isPending}
           onClick={() => save.mutate()}
         >
-          <Check size={16} aria-hidden />
-          {t("investments.selectInstrument")}
+          <Plus size={16} aria-hidden />
+          {t("investments.addAsset")}
         </Button>
       </div>
     </div>

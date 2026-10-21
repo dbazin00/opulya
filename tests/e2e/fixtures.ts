@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { readFile, unlink } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-import { signupSchema, signupPasswordSchema } from "@opulya/shared";
+import { assetTypes, signupSchema, signupPasswordSchema } from "@opulya/shared";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../apps/api/src/generated/prisma/client";
 
@@ -36,7 +36,7 @@ export async function catalogueFixture(input: {
     const existing = await db.instrumentMapping.findUnique({
       where: {
         provider_symbol_exchange_mic_currency: {
-          provider: "Alpha Vantage",
+          provider: "Yahoo Finance",
           symbol: row.symbol,
           exchange: row.exchange,
           mic: row.mic,
@@ -55,7 +55,7 @@ export async function catalogueFixture(input: {
         identity: randomUUID(),
         mappings: {
           create: {
-            provider: "Alpha Vantage",
+            provider: "Yahoo Finance",
             symbol: row.symbol,
             exchange: row.exchange,
             mic: row.mic,
@@ -126,6 +126,56 @@ export const test = base.extend<{
 }>({
   autoVerifySignup: [true, { option: true }],
   page: async ({ page, autoVerifySignup }, use) => {
+    const database = testDatabaseUrl();
+    if (new URL(database).pathname !== "/opulya_test")
+      throw new Error("Browser fixtures require opulya_test");
+    const db = new PrismaClient({
+      adapter: new PrismaPg({ connectionString: database }),
+    });
+    // Browser tests use isolated DB instruments as an offline provider fixture.
+    // Tests of live discovery override this route with their own controlled responses.
+    await page.route("**/api/instruments/directory?**", async (route) => {
+      const query = new URL(route.request().url()).searchParams;
+      const ownedResponse = await page.request.get("/api/assets");
+      if (!ownedResponse.ok()) {
+        await route.fulfill({ response: ownedResponse });
+        return;
+      }
+      const search = query.get("search") ?? "";
+      const assetType = assetTypes.find(
+        (type) => type === query.get("assetType"),
+      );
+      const rows = await db.instrument.findMany({
+        where: {
+          mappings: { some: { provider: "Yahoo Finance" } },
+          currency: query.get("currency") ?? "EUR",
+          ...(assetType ? { assetType } : {}),
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { symbol: { contains: search, mode: "insensitive" } },
+            { isin: { equals: search.toUpperCase() } },
+          ],
+        },
+        orderBy: [{ symbol: "asc" }, { exchange: "asc" }],
+        take: 50,
+      });
+      const owned = await ownedResponse.json();
+      const items = rows.filter(
+        (row: { id: string }) =>
+          !owned.some(
+            (asset: { instrumentId: string }) => asset.instrumentId === row.id,
+          ),
+      );
+      await route.fulfill({
+        json: {
+          items,
+          total: items.length,
+          ownedCount: rows.length - items.length,
+          page: 0,
+          hasMore: false,
+        },
+      });
+    });
     const post = page.request.post.bind(page.request);
     if (autoVerifySignup) {
       page.request.post = async (url, options) => {
@@ -174,7 +224,11 @@ export const test = base.extend<{
         return login;
       };
     }
-    await use(page);
+    try {
+      await use(page);
+    } finally {
+      await db.$disconnect();
+    }
   },
   apiRateBudget: [
     async ({ request }, use) => {

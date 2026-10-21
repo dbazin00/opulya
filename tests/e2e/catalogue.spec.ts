@@ -41,7 +41,7 @@ test("add asset defaults to all types and browses grouped, paged currency-specif
       .flatMap((type) =>
         Array.from({ length: 45 }, (_, i) => ({
           id: `fixture-${type}-${currency}-${i}`,
-          name: `${type === "STOCK" ? "Company" : type === "ETF" ? "Vanguard ETF" : type === "CRYPTO" ? "Coin" : "Mutual fund"} ${String(i).padStart(2, "0")}`,
+          name: `Fixture ${type === "STOCK" ? "Company" : type === "ETF" ? "Vanguard ETF" : type === "CRYPTO" ? "Coin" : "Mutual fund"} ${String(i).padStart(2, "0")}`,
           symbol: `${type}${i}`,
           assetType: type,
           currency,
@@ -90,6 +90,18 @@ test("add asset defaults to all types and browses grouped, paged currency-specif
       dialog.getByRole("combobox", { name: "Asset type", exact: true }),
     ).toContainText("All");
     const list = dialog.getByRole("list", { name: "Matching instruments" });
+    await expect(
+      dialog.getByText("Enter at least 2 characters to search Yahoo Finance"),
+    ).toBeVisible();
+    expect(browseCount).toBe(0);
+    await dialog
+      .getByLabel("Search by name, symbol or ISIN", { exact: true })
+      .fill("0");
+    await page.waitForTimeout(500);
+    expect(browseCount).toBe(0);
+    await dialog
+      .getByLabel("Search by name, symbol or ISIN", { exact: true })
+      .fill("Fixture");
     await expect(list.getByRole("button")).toHaveCount(40);
     for (const type of ["Stock", "ETF", "Crypto", "Fund"])
       await expect(
@@ -111,7 +123,7 @@ test("add asset defaults to all types and browses grouped, paged currency-specif
       .click();
     await expect(list.getByRole("button")).toHaveCount(5);
     await dialog
-      .getByLabel("Search by name or symbol", { exact: true })
+      .getByLabel("Search by name, symbol or ISIN", { exact: true })
       .fill("Vanguard ETF 44");
     await expect(list.getByRole("button")).toHaveCount(1);
     await expect(list).toContainText("EUR");
@@ -120,15 +132,15 @@ test("add asset defaults to all types and browses grouped, paged currency-specif
     await expect(
       dialog
         .locator(".market-data-credit")
-        .getByRole("link", { name: "Alpha Vantage", exact: true }),
-    ).toHaveAttribute("href", "https://www.alphavantage.co");
+        .getByRole("link", { name: "Yahoo Finance", exact: true }),
+    ).toHaveAttribute("href", "https://finance.yahoo.com");
     await expect(
       dialog.getByText("1 instrument", { exact: true }),
     ).toBeVisible();
     await list.getByRole("button").click();
     await expect(
       dialog.getByRole("button", {
-        name: "Use selected instrument",
+        name: "Add asset",
         exact: true,
       }),
     ).toBeEnabled();
@@ -150,6 +162,9 @@ test("add asset defaults to all types and browses grouped, paged currency-specif
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
     await chooseOption(page.getByLabel("Currency", { exact: true }), "USD");
     await page.getByRole("button", { name: "Add asset", exact: true }).click();
+    await dialog
+      .getByLabel("Search by name, symbol or ISIN", { exact: true })
+      .fill("Fixture");
     await expect(list).toContainText("USD");
     await expect(list).not.toContainText("EUR");
     expect(

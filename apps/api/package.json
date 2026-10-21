@@ -6,7 +6,6 @@
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
     "start": "node dist/main.js",
-    "market:sync": "node dist/sync-prices.js",
     "db:backfill-balances": "node dist/backfill-balance-snapshots.js",
     "db:credentials": "tsx --tsconfig tsconfig.json src/database-credentials.ts",
     "typecheck": "tsc --project tsconfig.typecheck.json"
@@ -20,7 +19,6 @@
     "@prisma/client": "7.10.0",
     "argon2": "0.45.1",
     "cookie-parser": "1.4.7",
-    "csv-parse": "7.0.3",
     "dotenv": "17.4.2",
     "express": "5.2.1",
     "express-rate-limit": "8.7.0",
@@ -28,7 +26,8 @@
     "luxon": "3.7.2",
     "pg": "8.23.1",
     "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.2"
+    "rxjs": "7.8.2",
+    "yahoo-finance2": "4.0.4"
   },
   "devDependencies": {
     "@types/cookie-parser": "1.4.10",

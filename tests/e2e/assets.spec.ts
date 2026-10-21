@@ -4,6 +4,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../apps/api/src/generated/prisma/client";
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, chooseOption } from "./fixtures";
+import { mockMarketQuotes } from "./quotes";
 
 test("asset library separates currencies and receives its first quote automatically", async ({
   page,
@@ -15,9 +16,7 @@ test("asset library separates currencies and receives its first quote automatica
     adapter: new PrismaPg({ connectionString: database }),
   });
   const ids: string[] = [];
-  let userId = "",
-    pendingReads = 0;
-  const headers: (string | undefined)[] = [];
+  let userId = "";
   const suffix = randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase();
   const name = `Bitcoin library fixture ${suffix}`;
   const post = async (path: string, data: unknown) => {
@@ -43,7 +42,7 @@ test("asset library separates currencies and receives its first quote automatica
           mappings: {
             create: {
               symbol: `AL${suffix}/${currency}`,
-              provider: "Alpha Vantage",
+              provider: "Yahoo Finance",
               exchange: "Binance",
               mic: "",
               currency,
@@ -64,61 +63,11 @@ test("asset library separates currencies and receives its first quote automatica
       })
     ).id;
     await post("assets", { instrumentId: ids[1] });
-    const providerTime = new Date(Date.now() - 1000),
-      updated = new Date();
-    await db.latestPrice.create({
-      data: {
-        instrumentId: ids[1]!,
-        price: "105000",
-        currency: "USD",
-        provider: "Alpha Vantage",
-        kind: "QUOTE",
-        marketAt: providerTime,
-        fetchedAt: updated,
-        availableAt: providerTime,
-        tradingDate: new Date(updated.toISOString().slice(0, 10)),
-      },
-    });
-    // A stored response simulates the background provider completion without a live API/key.
-    await page.route("**/api/assets/prices", async (route) => {
-      headers.push(route.request().headers()["x-opulya-poll"]);
-      const owned = await db.asset.findFirst({
-        where: { userId, instrumentId: ids[0] },
-      });
-      if (owned && pendingReads >= 1) {
-        await db.latestPrice.upsert({
-          where: { instrumentId: ids[0]! },
-          create: {
-            instrumentId: ids[0]!,
-            price: "95000",
-            currency: "EUR",
-            provider: "Alpha Vantage",
-            kind: "QUOTE",
-            marketAt: providerTime,
-            fetchedAt: updated,
-            availableAt: providerTime,
-            tradingDate: new Date(updated.toISOString().slice(0, 10)),
-          },
-          update: {},
-        });
-        await db.instrumentMapping.updateMany({
-          where: { instrumentId: ids[0] },
-          data: {
-            lastSuccessAt: updated,
-            error: null,
-            currentRequestedAt: null,
-          },
-        });
-      }
-      const response = await route.fetch();
-      const data = await response.json();
-      for (const row of data)
-        if (!row.quote) {
-          row.error = "MARKET_PRICE_PENDING";
-          pendingReads++;
-        }
-      await route.fulfill({ json: data });
-    });
+    const providerTime = new Date(Date.now() - 1000);
+    await mockMarketQuotes(page, (asset) => ({
+      price: asset.currency === "EUR" ? "95000" : "105000",
+      marketAt: providerTime.toISOString(),
+    }));
     let releaseAssets!: () => void;
     const initialAssets = new Promise<void>((resolve) => {
       releaseAssets = resolve;
@@ -150,7 +99,7 @@ test("asset library separates currencies and receives its first quote automatica
       dialog.getByLabel("Price per unit", { exact: true }),
     ).toHaveCount(0);
     await dialog
-      .getByLabel("Search by name or symbol", { exact: true })
+      .getByLabel("Search by name, symbol or ISIN", { exact: true })
       .fill(name);
     const matches = dialog.getByRole("list", { name: "Matching instruments" });
     await expect(matches.getByRole("button")).toHaveCount(1);
@@ -158,20 +107,28 @@ test("asset library separates currencies and receives its first quote automatica
     await expect(matches).not.toContainText("USD");
     await matches.getByRole("button").click();
     await dialog
-      .getByRole("button", { name: "Use selected instrument", exact: true })
+      .getByRole("button", { name: "Add asset", exact: true })
       .click();
     await expect(dialog).not.toBeVisible();
     const row = page.locator(".asset-row");
     await expect(row).toHaveCount(1);
-    await expect(row.locator(".asset-price .spinner")).toBeVisible();
     await expect(row.locator(".asset-price > .money")).toHaveText("€95,000.00");
-    await expect(row.locator(".asset-price-date")).toContainText("Price date:");
+    await expect(row.locator("time")).toHaveText(
+      new Intl.DateTimeFormat("en", {
+        dateStyle: "short",
+        timeStyle: "short",
+        timeZone: "Europe/Zagreb",
+      }).format(providerTime),
+    );
+    await expect(row.locator(".asset-price-date")).not.toContainText(
+      "Price as of",
+    );
     await expect(row.locator(".asset-price-date")).not.toContainText(
       "Provider time:",
     );
     await expect(row.locator("time").first()).toHaveAttribute(
       "dateTime",
-      updated.toISOString().slice(0, 10),
+      providerTime.toISOString(),
     );
     await expect(row.locator("time")).toHaveCount(1);
     await expect(row.locator(".asset-price-date")).not.toContainText(
@@ -184,19 +141,18 @@ test("asset library separates currencies and receives its first quote automatica
       1,
     );
     await expect(row.getByRole("button", { name: /refresh/i })).toHaveCount(0);
-    await expect(row).not.toContainText("Alpha Vantage");
+    await expect(row).not.toContainText("Yahoo Finance");
     const credit = page.locator(".market-data-credit");
     await expect(credit).toHaveCount(1);
-    await expect(credit).toContainText("Data provided by Alpha Vantage");
+    await expect(credit).toContainText("Data provided by Yahoo Finance");
     const source = credit.getByRole("link", {
-      name: "Alpha Vantage",
+      name: "Yahoo Finance",
       exact: true,
     });
-    await expect(source).toHaveAttribute("href", "https://www.alphavantage.co");
+    await expect(source).toHaveAttribute("href", "https://finance.yahoo.com");
     await expect(source).toHaveAttribute("target", "_blank");
     await expect(source).toHaveAttribute("rel", "noopener noreferrer");
-    await expect(page.getByText(/12:00 UTC/)).toBeVisible();
-    expect(headers).toContain("1");
+    await expect(page.getByText(/12:00 UTC/)).toHaveCount(0);
     expect(
       (
         await new AxeBuilder({ page })
@@ -222,7 +178,7 @@ test("asset library separates currencies and receives its first quote automatica
     await expect(row.locator(".asset-identity")).not.toContainText("EUR");
     await page.getByRole("button", { name: "Add asset", exact: true }).click();
     await dialog
-      .getByLabel("Search by name or symbol", { exact: true })
+      .getByLabel("Search by name, symbol or ISIN", { exact: true })
       .fill(name);
     await expect(
       dialog.getByText("You already have all matching assets", { exact: true }),
@@ -238,10 +194,7 @@ test("asset library separates currencies and receives its first quote automatica
     await expect(row).toHaveCount(0);
     await chooseOption(page.getByLabel("Asset type", { exact: true }), "");
     await expect(row).toHaveCount(1);
-    const reads = headers.length;
     await page.goto("/settings");
-    await page.waitForTimeout(2200);
-    expect(headers.length).toBe(reads);
     await chooseOption(
       page.getByRole("combobox", { name: "Display language", exact: true }),
       "hr",
@@ -254,11 +207,18 @@ test("asset library separates currencies and receives its first quote automatica
     await expect(page.locator(".asset-price > .money")).toHaveText(
       "95.000,00 €",
     );
-    await expect(page.locator(".asset-price-date")).toContainText(
-      "Datum cijene:",
+    await expect(row.locator("time")).toHaveText(
+      new Intl.DateTimeFormat("hr", {
+        dateStyle: "short",
+        timeStyle: "short",
+        timeZone: "Europe/Zagreb",
+      }).format(providerTime),
+    );
+    await expect(row.locator(".asset-price-date")).not.toContainText(
+      "Cijena na dan",
     );
     await expect(page.locator(".market-data-credit")).toHaveText(
-      "Podatke pruža Alpha Vantage",
+      "Podatke pruža Yahoo Finance",
     );
     await row
       .getByRole("button", { name: `Obriši ${name}`, exact: true })
@@ -278,9 +238,7 @@ test("asset library separates currencies and receives its first quote automatica
     await deletion.getByRole("button", { name: "Obriši", exact: true }).click();
     await expect(deletion).not.toBeVisible();
     await expect(row).toHaveCount(0);
-    expect(
-      await db.latestPrice.count({ where: { instrumentId: ids[0] } }),
-    ).toBe(1);
+    expect(await db.instrument.count({ where: { id: ids[0] } })).toBe(1);
   } finally {
     await db.asset.deleteMany({ where: { userId } });
     if (userId) await db.user.deleteMany({ where: { id: userId } });

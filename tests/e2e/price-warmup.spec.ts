@@ -4,8 +4,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../apps/api/src/generated/prisma/client";
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, chooseOption } from "./fixtures";
+import { mockMarketQuotes } from "./quotes";
 
-test("first portfolio price appears automatically without manual refresh", async ({
+test("near-live quotes refresh only while the portfolio is visible", async ({
   page,
 }, testInfo) => {
   const database = testDatabaseUrl();
@@ -15,9 +16,15 @@ test("first portfolio price appears automatically without manual refresh", async
     adapter: new PrismaPg({ connectionString: database }),
   });
   let userId = "",
-    instrumentId = "",
-    pendingRequests = 0;
-  const pollHeaders: (string | undefined)[] = [];
+    instrumentId = "";
+  let price = "95000";
+  let stale = false;
+  const { requests } = await mockMarketQuotes(page, () => ({
+    price,
+    stale,
+    error: stale ? "MARKET_RATE_LIMIT" : null,
+    delayMinutes: 15,
+  }));
   const post = async (path: string, data: unknown) => {
     const response = await page.request.post(`/api/${path}`, {
       headers: { Origin: "http://localhost:3001", "X-Opulya-Request": "1" },
@@ -42,7 +49,7 @@ test("first portfolio price appears automatically without manual refresh", async
     await db.instrumentMapping.create({
       data: {
         instrumentId,
-        provider: "Alpha Vantage",
+        provider: "Yahoo Finance",
         symbol: instrument.symbol,
         exchange: "Binance",
         currency: "EUR",
@@ -64,55 +71,14 @@ test("first portfolio price appears automatically without manual refresh", async
       currency: "EUR",
       initialBalance: "1000",
     });
-    const account = await post("accounts", {
+    await post("accounts", {
       name: "Portfolio",
       type: "INVESTMENT",
       currency: "EUR",
       initialBalance: "0",
     });
     const asset = await post("assets", { instrumentId });
-    // Simulate a delayed background job with a stored quote; never contact the real provider.
-    await page.route(
-      `**/api/accounts/${account.id}/portfolio`,
-      async (route) => {
-        pollHeaders.push(route.request().headers()["x-opulya-poll"]);
-        if (pendingRequests >= 1) {
-          const fetchedAt = new Date();
-          const tradingDate = new Date(fetchedAt.getTime() - 86400000);
-          tradingDate.setUTCHours(0, 0, 0, 0);
-          await db.latestPrice.upsert({
-            where: { instrumentId },
-            create: {
-              instrumentId,
-              price: "95000",
-              currency: "EUR",
-              provider: "Alpha Vantage",
-              tradingDate,
-              availableAt: new Date(tradingDate.getTime() + 86400000),
-              fetchedAt,
-            },
-            update: {},
-          });
-          await db.instrumentMapping.updateMany({
-            where: { instrumentId },
-            data: { lastSuccessAt: fetchedAt },
-          });
-        }
-        const response = await route.fetch();
-        const data = await response.json();
-        if (
-          data.positions.some(
-            (row: { quantity: string }) => row.quantity !== "0",
-          ) &&
-          data.quotes.some((row: { quote: unknown }) => !row.quote)
-        ) {
-          pendingRequests++;
-          for (const quote of data.quotes)
-            if (!quote.quote) quote.error = "MARKET_PRICE_PENDING";
-        }
-        await route.fulfill({ json: data });
-      },
-    );
+    await page.clock.install();
     await page.goto("/investments");
     await page
       .getByRole("button", { name: "Record activity", exact: true })
@@ -131,24 +97,39 @@ test("first portfolio price appears automatically without manual refresh", async
     await dialog.getByLabel("Fee", { exact: true }).fill("50");
     await dialog.getByRole("button", { name: "Save", exact: true }).click();
     await expect(dialog).not.toBeVisible();
-    await expect(page.locator(".pending-price")).toContainText(
-      "Fetching price",
-    );
-    await expect(
-      page.locator(".investment-stats .spinner[role=status]"),
-    ).toHaveCount(2);
-    await expect(
-      page.locator(".investment-stats .spinner[role=status]").first(),
-    ).toHaveAttribute("aria-label", "Fetching price");
-    await expect(page.locator(".holding")).toContainText("€850.00");
-    await page.screenshot({
-      path: `test-results/price-pending-${testInfo.project.name}.png`,
-      fullPage: true,
-    });
     await expect(page.locator(".holding-title .money")).toHaveText("€950.00");
-    await expect(page.locator(".pending-price")).toHaveCount(0);
+    await expect(page.locator(".holding-metrics")).toContainText("€850.00");
     await expect(page.locator(".holding-metrics")).toContainText("€100.00");
-    expect(pollHeaders).toContain("1");
+    await expect(page.locator(".price-status")).toContainText("Price as of");
+    await expect(page.locator(".price-status")).toContainText(
+      "Provider delay: 15 min",
+    );
+    price = "97000";
+    await page.clock.fastForward(60_100);
+    await expect(page.locator(".holding-title .money")).toHaveText("€970.00");
+    await expect(page.locator(".holding-metrics")).toContainText("€120.00");
+    expect(requests.some((request) => request.background)).toBe(true);
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "hidden",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await page.waitForTimeout(100);
+    const hiddenCount = requests.length;
+    await page.clock.fastForward(120_000);
+    expect(requests.length).toBe(hiddenCount);
+    stale = true;
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "visible",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await expect(page.locator(".price-status")).toContainText("Stale price");
+    await expect(page.locator(".holding-title .money")).toHaveText("€970.00");
     expect(
       (
         await new AxeBuilder({ page })
@@ -165,10 +146,10 @@ test("first portfolio price appears automatically without manual refresh", async
       path: `test-results/price-ready-${testInfo.project.name}.png`,
       fullPage: true,
     });
-    const seen = pollHeaders.length;
+    const seen = requests.length;
     await page.goto("/categories");
-    await page.waitForTimeout(2500);
-    expect(pollHeaders.length).toBe(seen);
+    await page.clock.fastForward(120_000);
+    expect(requests.length).toBe(seen);
   } finally {
     if (userId) {
       await db.investmentTransaction.deleteMany({ where: { userId } });

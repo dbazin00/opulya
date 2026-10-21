@@ -4,8 +4,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../apps/api/src/generated/prisma/client";
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, chooseOption } from "./fixtures";
+import { mockMarketQuotes } from "./quotes";
 
-test("asset prices distinguish plan restrictions, missing listings and supported stocks in both languages", async ({
+test("asset prices distinguish access failures, missing listings and supported stocks in both languages", async ({
   page,
 }, testInfo) => {
   const database = testDatabaseUrl();
@@ -39,21 +40,21 @@ test("asset prices distinguish plan restrictions, missing listings and supported
     const listings = [
       {
         symbol: `ETF${suffix}`,
-        name: "Restricted ETF",
+        name: "Unavailable ETF",
         assetType: "ETF" as const,
         exchange: "Euronext",
         mic: "XAMS",
         currency: "EUR",
-        error: "MARKET_PLAN_REQUIRED",
+        error: "MARKET_AUTH_FAILED",
       },
       {
         symbol: `FUND${suffix}`,
-        name: "Restricted fund",
+        name: "Unavailable fund",
         assetType: "FUND" as const,
         exchange: "FSX",
         mic: "XFRA",
         currency: "EUR",
-        error: "MARKET_PLAN_REQUIRED",
+        error: "MARKET_AUTH_FAILED",
       },
       {
         symbol: `STOCK${suffix}`,
@@ -74,7 +75,14 @@ test("asset prices distinguish plan restrictions, missing listings and supported
         error: null,
       },
     ];
-    for (const { error, ...listing } of listings) {
+    await mockMarketQuotes(page, (asset) => {
+      const listing = listings.find((row) => row.symbol === asset.symbol);
+      return {
+        price: listing?.error ? null : "123.45",
+        error: listing?.error ?? null,
+      };
+    });
+    for (const { error: _error, ...listing } of listings) {
       const i = await db.instrument.create({
         data: {
           ...listing,
@@ -82,7 +90,7 @@ test("asset prices distinguish plan restrictions, missing listings and supported
           timeZone: "UTC",
           mappings: {
             create: {
-              provider: "Alpha Vantage",
+              provider: "Yahoo Finance",
               symbol: listing.symbol,
               exchange: listing.exchange,
               mic: listing.mic,
@@ -93,34 +101,11 @@ test("asset prices distinguish plan restrictions, missing listings and supported
       });
       ids.push(i.id);
       await post("assets", { instrumentId: i.id });
-      await db.instrumentMapping.updateMany({
-        where: { instrumentId: i.id },
-        data: {
-          error,
-          currentRequestedAt: null,
-          lastAttemptAt: new Date(),
-          ...(error ? {} : { lastSuccessAt: new Date() }),
-        },
-      });
-      if (!error)
-        await db.latestPrice.create({
-          data: {
-            instrumentId: i.id,
-            provider: "Alpha Vantage",
-            currency: listing.currency,
-            price: "123.45",
-            kind: "QUOTE",
-            marketAt: new Date(),
-            fetchedAt: new Date(),
-            availableAt: new Date(),
-            tradingDate: new Date(new Date().toISOString().slice(0, 10)),
-          },
-        });
     }
     await page.goto("/assets");
     await expect(
       page.getByText(
-        "Your market-data plan does not include prices for this listing.",
+        "The market-data provider rejected access. Please try again later.",
         { exact: true },
       ),
     ).toHaveCount(2);
@@ -149,7 +134,7 @@ test("asset prices distinguish plan restrictions, missing listings and supported
       ),
     ).toBe(true);
     await page.screenshot({
-      path: `test-results/market-plan-en-${testInfo.project.name}.png`,
+      path: `test-results/market-access-en-${testInfo.project.name}.png`,
       fullPage: true,
     });
     await chooseOption(page.getByLabel("Currency", { exact: true }), "USD");
@@ -169,7 +154,7 @@ test("asset prices distinguish plan restrictions, missing listings and supported
     await page.goto("/assets");
     await expect(
       page.getByText(
-        "Vaš plan tržišnih podataka ne uključuje cijene za ovu kotaciju.",
+        "Pružatelj tržišnih podataka odbio je pristup. Pokušajte ponovno kasnije.",
         { exact: true },
       ),
     ).toHaveCount(2);
@@ -185,7 +170,7 @@ test("asset prices distinguish plan restrictions, missing listings and supported
       ),
     ).toBe(true);
     await page.screenshot({
-      path: `test-results/market-plan-hr-${testInfo.project.name}.png`,
+      path: `test-results/market-access-hr-${testInfo.project.name}.png`,
       fullPage: true,
     });
   } finally {

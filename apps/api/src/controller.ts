@@ -18,18 +18,11 @@ import { Database } from "./db.js";
 import { LedgerService } from "./ledger.js";
 import { ReportsService } from "./reports.js";
 import { BudgetsService } from "./budgets.js";
-import { PriceScheduler } from "./price-scheduler.js";
 import {
   InstrumentDirectory,
   directorySchema,
 } from "./instrument-directory.js";
-import {
-  InstrumentsService,
-  MARKET_PROVIDER_NAME,
-  catalogueSchema,
-  discoverySchema,
-  selectInstrumentSchema,
-} from "./instruments.js";
+import { InstrumentsService, selectInstrumentSchema } from "./instruments.js";
 
 @Controller()
 @UseGuards(AuthGuard)
@@ -41,7 +34,6 @@ export class FinanceController {
     @Inject(BudgetsService) private readonly budgets: BudgetsService,
     @Inject(InstrumentsService)
     private readonly instruments: InstrumentsService,
-    @Inject(PriceScheduler) private readonly prices: PriceScheduler,
     @Inject(InstrumentDirectory)
     private readonly directory: InstrumentDirectory,
   ) {}
@@ -188,10 +180,9 @@ export class FinanceController {
         instrument: {
           select: {
             symbol: true,
-            mappings: {
-              where: { provider: MARKET_PROVIDER_NAME },
-              select: { id: true },
-            },
+            exchangeName: true,
+            mic: true,
+            isin: true,
           },
         },
       },
@@ -199,8 +190,10 @@ export class FinanceController {
     return rows.map(({ _count, instrument, ...asset }) => ({
       ...asset,
       canDelete: _count.transactions === 0,
-      priceConnected: !!instrument?.mappings.length,
       sourceSymbol: instrument?.symbol ?? null,
+      exchangeName: instrument?.exchangeName ?? null,
+      mic: instrument?.mic ?? "",
+      isin: instrument?.isin ?? null,
     }));
   }
   @Delete("assets/:id") deleteAsset(
@@ -223,33 +216,13 @@ export class FinanceController {
       req.user.id,
       await this.directory.resolve(selected.instrumentId),
     );
-    const price = await this.instruments.requestCurrent(req.user.id, asset.id);
-    if (!price.cached) this.prices.requestRefresh();
     return asset;
-  }
-  @Get("instruments") catalogue(@Query() query: unknown) {
-    return this.instruments.list(catalogueSchema.parse(query));
   }
   @Get("instruments/directory") directoryItems(
     @Req() req: AuthRequest,
     @Query() query: unknown,
   ) {
     return this.directory.browse(directorySchema.parse(query), req.user.id);
-  }
-  @Post("instruments/search") async discover(
-    @Req() req: AuthRequest,
-    @Body() body: unknown,
-  ) {
-    const input = discoverySchema.parse(body);
-    const local = await this.instruments.list(input);
-    const rows = local.length
-      ? local
-      : await this.instruments.discover(
-          input.search,
-          input.assetType,
-          input.currency,
-        );
-    return (await this.instruments.available(req.user.id, rows)).items;
   }
   @Get("investments/:id") investmentDetails(
     @Req() req: AuthRequest,
@@ -262,7 +235,6 @@ export class FinanceController {
     @Body() body: unknown,
   ) {
     const entry = await this.ledger.investment(req.user.id, body);
-    if (entry.type === "BUY" && !entry.voidedAt) this.prices.requestRefresh();
     return entry;
   }
   @Post("investments/:id/void") voidInvestment(

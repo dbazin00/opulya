@@ -8,7 +8,7 @@ export function MarketDataCredit() {
       {t.rich("credit", {
         provider: (name) => (
           <a
-            href="https://www.alphavantage.co"
+            href="https://finance.yahoo.com"
             target="_blank"
             rel="noopener noreferrer"
           >

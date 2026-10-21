@@ -8,7 +8,7 @@ import { readFile } from "node:fs/promises";
 process.env.OPULYA_TEST = "1";
 process.env.NODE_ENV = "test";
 process.env.EMAIL_TRANSPORT = "test";
-process.env.ALPHA_VANTAGE_API_KEY = "";
+process.env.MARKET_DATA_ENABLED = "false";
 process.env.DATABASE_URL = testDatabaseUrl();
 process.env.WEB_ORIGIN = "http://localhost:3000";
 if (!new URL(process.env.DATABASE_URL).pathname.endsWith("/opulya_test"))

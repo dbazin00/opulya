@@ -51,7 +51,7 @@ Weighted-average cost is calculated per account and asset:
 
 Total invested is cumulative gross purchases plus buy fees, not deposits or a time-weighted return. For example, buying for 800 plus a 50 fee and later valuing at 950 gives 100 unrealized profit.
 
-See [market data](alpha-vantage.md) for identity, price caching and refresh behavior.
+See [market data](market-data.md) for identity, price caching and refresh behavior.
 
 ## Limitations
 

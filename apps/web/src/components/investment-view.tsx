@@ -1,4 +1,5 @@
 "use client";
+import { AssetListing, ListingDetails } from "./asset-listing";
 import { Dropdown } from "./dropdown";
 import { useRef, useState } from "react";
 import Link from "next/link";
@@ -9,10 +10,12 @@ import {
   formatDate,
   formatTime,
   formatQuantity,
+  priceRefreshInterval,
   resolveLocale,
 } from "@opulya/shared";
 import { api } from "@/lib/api";
-import { priceRefreshInterval } from "@/lib/price-refresh";
+import { useVisible } from "@/lib/use-visible";
+import { QuoteStatus } from "./quote-status";
 import type {
   Account,
   EditableInvestment,
@@ -29,7 +32,6 @@ import {
   Money,
   MonthPicker,
   Stat,
-  Spinner,
 } from "./ui";
 import { InvestmentForm } from "./forms";
 import { InstrumentPicker } from "./instrument-picker";
@@ -55,7 +57,7 @@ export function InvestmentView({
   const [editing, setEditing] = useState<EditableInvestment>();
   const client = useQueryClient();
   const loadedAccounts = useRef(new Set<string>());
-  const pendingSince = useRef(new Map<string, number>());
+  const visible = useVisible();
   const value = useQuery({
     queryKey: ["portfolio", account?.id],
     queryFn: () => {
@@ -66,12 +68,10 @@ export function InvestmentView({
         background,
       });
     },
-    enabled: !!account,
+    enabled: !!account && visible,
     refetchInterval: (query) =>
-      query.state.data
-        ? query.state.error
-          ? 60000
-          : priceRefreshInterval(query.state.data.quotes, pendingSince.current)
+      query.state.data?.positions.some((position) => position.quantity !== "0")
+        ? priceRefreshInterval(visible, true)
         : false,
     retry: false,
     refetchIntervalInBackground: false,
@@ -99,9 +99,7 @@ export function InvestmentView({
       </Empty>
     );
   const p = value.data;
-  const fetchingPrice = p?.quotes.some(
-    (item) => !item.quote && item.error === "MARKET_PRICE_PENDING",
-  );
+  const fetchingPrice = value.isLoading;
   return (
     <>
       <div className="investment-toolbar">
@@ -163,7 +161,7 @@ export function InvestmentView({
               <p className="notice">{t("investments.negativeCash")}</p>
             )}
             <p className="valuation-note muted">
-              {t("investments.dailyClose")}
+              {t("investments.quoteRefresh")}
             </p>
             <section className="section">
               <h2>{t("investments.holdings")}</h2>
@@ -176,20 +174,11 @@ export function InvestmentView({
                     const quote = p.quotes.find(
                       (q) => q.assetId === position.assetId,
                     );
-                    const pending =
-                      !quote?.quote && quote?.error === "MARKET_PRICE_PENDING";
+                    const pending = !quote?.quote && value.isLoading;
                     return (
                       <article className="holding" key={position.assetId}>
                         <div className="holding-title">
-                          <div>
-                            <strong>{instrument.symbol}</strong>
-                            <span>
-                              {instrument.name} ·{" "}
-                              {instrument.assetType === "CRYPTO"
-                                ? t("types.CRYPTO")
-                                : instrument.exchange}
-                            </span>
-                          </div>
+                          <AssetListing listing={instrument} />
                           <Money
                             value={position.marketValue}
                             placeholder={
@@ -200,6 +189,7 @@ export function InvestmentView({
                             currency={account.currency}
                           />
                         </div>
+                        <ListingDetails listing={instrument} />
                         <dl className="holding-metrics">
                           <div>
                             <dt>{t("investments.quantity")}</dt>
@@ -289,40 +279,11 @@ export function InvestmentView({
                             </dd>
                           </div>
                         </dl>
-                        <div className="price-status">
-                          {quote?.quote ? (
-                            <span
-                              className={
-                                quote.quote.stale ? "negative" : "muted"
-                              }
-                            >
-                              {quote.quote.stale &&
-                                `${t("investments.stale")} · `}
-                              {t("assets.priceDate")}:{" "}
-                              {new Intl.DateTimeFormat(locale, {
-                                dateStyle: "medium",
-                                timeZone: "UTC",
-                              }).format(
-                                new Date(
-                                  `${quote.quote.tradingDate}T00:00:00Z`,
-                                ),
-                              )}
-                            </span>
-                          ) : pending ? (
-                            <Spinner
-                              label={t("investments.fetchingPrice")}
-                              size={16}
-                              showLabel
-                              className="pending-price"
-                            />
-                          ) : (
-                            <span>
-                              {quote?.error && t.has(`errors.${quote.error}`)
-                                ? t(`errors.${quote.error}`)
-                                : t("investments.unavailable")}
-                            </span>
-                          )}
-                        </div>
+                        <QuoteStatus
+                          quote={quote?.quote ?? null}
+                          error={quote?.error ?? null}
+                          loading={pending}
+                        />
                       </article>
                     );
                   })}

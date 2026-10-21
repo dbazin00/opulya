@@ -28,7 +28,6 @@
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "mail:check": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/check-mail.ts",
-    "market:sync": "tsx --tsconfig apps/api/tsconfig.json apps/api/src/sync-prices.ts",
     "db:up": "docker compose up -d --wait",
     "db:credentials": "npm run db:credentials --workspace @opulya/api --"
   },

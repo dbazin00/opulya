@@ -47,11 +47,6 @@ enum AssetType {
   OTHER
 }
 
-enum PriceKind {
-  CLOSE
-  QUOTE
-}
-
 model User {
   id                         String                  @id @default(cuid())
   firstName                  String
@@ -219,6 +214,7 @@ model Instrument {
   symbol      String
   assetType   AssetType
   exchange    String
+  exchangeName String?
   mic         String              @default("")
   currency    String              @db.VarChar(3)
   timeZone    String              @default("UTC")
@@ -227,7 +223,6 @@ model Instrument {
   createdAt   DateTime            @default(now()) @db.Timestamptz(6)
   assets      Asset[]
   mappings    InstrumentMapping[]
-  latestPrice LatestPrice?
 
   @@index([symbol])
 }
@@ -240,27 +235,10 @@ model InstrumentMapping {
   exchange           String
   mic                String     @default("")
   currency           String     @db.VarChar(3)
-  lastAttemptAt      DateTime?  @db.Timestamptz(6)
-  lastSuccessAt      DateTime?  @db.Timestamptz(6)
-  error              String?
-  currentRequestedAt DateTime?  @db.Timestamptz(6)
   instrument         Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
 
   @@unique([instrumentId, provider])
   @@unique([provider, symbol, exchange, mic, currency])
-}
-
-model LatestPrice {
-  instrumentId String     @id
-  tradingDate  DateTime   @db.Date
-  availableAt  DateTime   @db.Timestamptz(6)
-  price        Decimal    @db.Decimal(24, 8)
-  currency     String     @db.VarChar(3)
-  provider     String
-  fetchedAt    DateTime   @db.Timestamptz(6)
-  kind         PriceKind  @default(CLOSE)
-  marketAt     DateTime?  @db.Timestamptz(6)
-  instrument   Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
 }
 
 model MarketQuota {

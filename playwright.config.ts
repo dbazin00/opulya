@@ -48,7 +48,7 @@ export default defineConfig({
           new URL("./.runtime/e2e-mail/", import.meta.url),
         ),
         OPULYA_TEST: "0",
-        ALPHA_VANTAGE_API_KEY: "",
+        MARKET_DATA_ENABLED: "false",
       },
     },
     {

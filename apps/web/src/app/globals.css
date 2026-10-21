@@ -29,10 +29,6 @@
 .instrument-pagination .icon-button:disabled {
   cursor: not-allowed;
 }
-.instrument-progress {
-  font-size: 12px;
-  color: var(--muted);
-}
 .instrument-picker > .button {
   justify-self: start;
 }
@@ -63,18 +59,78 @@
   color: var(--text);
   padding: 12px;
 }
-.instrument-results button:hover,
+.instrument-results button:hover {
+  background: #f3f6f4;
+}
 .instrument-results button.selected {
   background: #e9f1ee;
+  box-shadow: inset 3px 0 var(--green);
 }
-.instrument-results button > span {
+.instrument-results button:disabled {
+  cursor: not-allowed;
+  background: var(--surface);
+}
+.listing-identity {
   display: grid;
+  gap: 3px;
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.instrument-results small {
+.listing-identity strong {
+  font-size: 14px;
+  line-height: 1.45;
+}
+.listing-identity > span,
+.listing-identity small {
   color: #536269;
   font-size: 12px;
+  line-height: 1.5;
+}
+.listing-identity .listing-currency {
+  color: var(--green);
+  font-weight: 600;
+}
+.instrument-results button > svg {
+  flex-shrink: 0;
+}
+.listing-details {
+  min-width: 0;
+  margin-top: 8px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.listing-details summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  min-height: 44px;
+  color: var(--green);
+  cursor: pointer;
+  list-style: none;
+}
+.listing-details summary::-webkit-details-marker {
+  display: none;
+}
+.listing-details[open] summary svg {
+  transform: rotate(180deg);
+}
+.listing-details dl {
+  margin: 0 0 8px;
+  display: grid;
+  gap: 6px;
+}
+.listing-details dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  justify-content: space-between;
+}
+.listing-details dt {
+  color: var(--muted);
+}
+.listing-details dd {
+  margin: 0;
 }
 .instrument-picker .form-footer {
   margin-top: 0;
@@ -1455,14 +1511,9 @@ strong {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.asset-identity strong,
 .asset-price > .money {
   font-size: 14px;
 }
-.asset-identity > span {
-  font-size: 12px;
-}
-.asset-identity small,
 .asset-price small {
   font-size: 11px;
   color: var(--muted);
@@ -1476,10 +1527,6 @@ strong {
   justify-content: space-between;
   gap: 12px;
   min-width: 0;
-}
-.asset-price-date > span {
-  min-width: 0;
-  overflow-wrap: anywhere;
 }
 .asset-mobile-label {
   position: absolute;
@@ -1568,21 +1615,9 @@ strong {
   justify-content: space-between;
   align-items: center;
 }
-.holding-title > div {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.holding-title strong {
-  font-size: 17px;
-}
-.holding-title > div > span {
-  font-size: 11px;
-  color: var(--muted);
-  overflow-wrap: anywhere;
-}
 .holding-title > .money {
   font-size: 21px;
+  flex-shrink: 0;
 }
 .holding-metrics {
   display: grid;
@@ -1606,11 +1641,15 @@ strong {
 .price-status {
   display: flex;
   flex-direction: column;
-  font-size: 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
   color: var(--muted);
+  gap: 3px;
+}
+.holding > .price-status {
   border-top: 1px solid var(--line);
   padding-top: 12px;
-  gap: 3px;
 }
 .pending-price {
   display: inline-flex;

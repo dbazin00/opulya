@@ -225,9 +225,8 @@ test("record activity funds investments from a tracked account with linked histo
               currency: "EUR",
               fetchedAt: new Date().toISOString(),
               marketAt: new Date().toISOString(),
-              tradingDate: new Date().toISOString().slice(0, 10),
               kind: "QUOTE",
-              provider: "Alpha Vantage",
+              provider: "Yahoo Finance",
               stale: false,
               delayed: true,
             },
@@ -253,7 +252,9 @@ test("record activity funds investments from a tracked account with linked histo
   });
   quoteState = "auth-error";
   await page.reload();
-  await expect(holding).toContainText("The market-data API key was rejected.");
+  await expect(holding).toContainText(
+    "The market-data provider rejected access.",
+  );
   await page.goto("/settings");
   await chooseOption(
     page.getByRole("combobox", { name: "Display language", exact: true }),
@@ -263,7 +264,7 @@ test("record activity funds investments from a tracked account with linked histo
   await expect(page.locator("html")).toHaveAttribute("lang", "hr");
   await page.goto("/investments");
   await expect(page.locator(".holding")).toContainText(
-    "API ključ za tržišne podatke je odbijen.",
+    "Pružatelj tržišnih podataka odbio je pristup.",
   );
   quoteState = "priced";
   await page.reload();

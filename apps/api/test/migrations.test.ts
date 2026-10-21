@@ -69,6 +69,8 @@ test("migrations create the final schema on an empty database", async (suite) =>
             "0_init",
             "20261017120000_email_send_limits",
             "20261018120000_monthly_budgets",
+            "20261020120000_instrument_exchange_name",
+            "20261021120000_on_demand_quotes",
           ],
         );
         for (const table of [
@@ -114,7 +116,6 @@ test("migrations create the final schema on an empty database", async (suite) =>
             "Budget_amount_check",
             "Budget_month_check",
             "InvestmentTransaction_no_self_correction",
-            "LatestPrice_price_positive",
             "Transaction_hidden_balance_only",
             "Transaction_opening_balance_only",
           ],
@@ -129,7 +130,7 @@ test("migrations create the final schema on an empty database", async (suite) =>
       ('bank-a','u-a','Fixture bank','BANK','EUR',0,now()),
       ('inv-a','u-a','Fixture investment','INVESTMENT','EUR',0,now())`);
     await db.query(`INSERT INTO "Instrument" (id,name,symbol,"assetType",exchange,currency,identity)
-      VALUES ('coin','Fixture coin','BTC/EUR','CRYPTO','Alpha Vantage','EUR','fixture')`);
+      VALUES ('coin','Fixture coin','BTC/EUR','CRYPTO','Yahoo Finance','EUR','fixture')`);
     const constraint =
       (name: string, code = "23514") =>
       (error: unknown) =>
@@ -163,13 +164,27 @@ test("migrations create the final schema on an empty database", async (suite) =>
         );
       },
     );
-    await suite.test("rejects non-positive market prices", async () => {
-      await assert.rejects(
-        db.query(`INSERT INTO "LatestPrice" ("instrumentId","tradingDate","availableAt",price,currency,provider,"fetchedAt")
-        VALUES ('coin',current_date,now(),0,'EUR','fixture',now())`),
-        constraint("LatestPrice_price_positive"),
-      );
-    });
+    await suite.test(
+      "does not persist live prices or obsolete scheduler state",
+      async () => {
+        assert.equal(
+          (
+            await db.query(
+              "SELECT to_regclass('public.\"LatestPrice\"') AS name",
+            )
+          ).rows[0]?.name,
+          null,
+        );
+        assert.equal(
+          (
+            await db.query(
+              "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema='public' AND table_name='InstrumentMapping' AND column_name IN ('lastAttemptAt','lastSuccessAt','error','currentRequestedAt')",
+            )
+          ).rows[0]?.count,
+          0,
+        );
+      },
+    );
     await suite.test("rejects hidden income and expense history", async () => {
       await assert.rejects(
         db.query(`INSERT INTO "Transaction" (id,"userId",type,"destinationAccountId",amount,currency,"occurredAt","updatedAt","clientRequestId","visibleInHistory")

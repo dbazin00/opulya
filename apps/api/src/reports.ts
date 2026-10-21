@@ -46,6 +46,11 @@ export class ReportsService {
           ],
         },
       },
+      include: {
+        instrument: {
+          select: { symbol: true, exchangeName: true, mic: true, isin: true },
+        },
+      },
     });
     const base = portfolio(entries);
     const quotes = await Promise.all(
@@ -66,7 +71,13 @@ export class ReportsService {
     return {
       ...result,
       account,
-      assets,
+      assets: assets.map(({ instrument, ...asset }) => ({
+        ...asset,
+        sourceSymbol: instrument?.symbol ?? null,
+        exchangeName: instrument?.exchangeName ?? null,
+        mic: instrument?.mic ?? "",
+        isin: instrument?.isin ?? null,
+      })),
       quotes,
       cashBalance: cash,
       totalValue:

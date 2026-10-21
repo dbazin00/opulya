@@ -16,6 +16,7 @@ import {
   transactionTypes,
 } from "@opulya/shared";
 import { api, ApiError } from "@/lib/api";
+import { listingExchange } from "@/lib/listing";
 import type {
   Account,
   Asset,
@@ -759,9 +760,8 @@ export function InvestmentForm({
                 ?.filter((a) => a.currency === account.currency)
                 .map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.symbol} ·{" "}
-                    {a.assetType === "CRYPTO" ? t("types.CRYPTO") : a.exchange}{" "}
-                    · {a.name}
+                    {a.name} · {listingExchange(a) || t(`types.${a.assetType}`)}{" "}
+                    · {a.currency} · {a.symbol}
                   </option>
                 ))}
             </Dropdown>

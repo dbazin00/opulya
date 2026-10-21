@@ -3,13 +3,15 @@ import { useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
-import { assetTypes, currencies, resolveLocale } from "@opulya/shared";
+import { assetTypes, currencies, priceRefreshInterval } from "@opulya/shared";
 import { api } from "@/lib/api";
 import type { Asset, Portfolio } from "@/lib/types";
-import { priceRefreshInterval } from "@/lib/price-refresh";
+import { useVisible } from "@/lib/use-visible";
+import { QuoteStatus } from "./quote-status";
 import { Dropdown } from "./dropdown";
 import { InstrumentPicker } from "./instrument-picker";
 import { MarketDataCredit } from "./market-data-credit";
+import { AssetListing, ListingDetails } from "./asset-listing";
 import {
   Button,
   Empty,
@@ -23,7 +25,8 @@ import {
 
 export function AssetsView() {
   const t = useTranslations();
-  const locale = resolveLocale(useLocale());
+  const locale = useLocale();
+  const visible = useVisible();
   const [currency, setCurrency] = useState("EUR");
   const [type, setType] = useState("");
   const [search, setSearch] = useState("");
@@ -38,7 +41,6 @@ export function AssetsView() {
     },
   });
   const loaded = useRef(false);
-  const pendingSince = useRef(new Map<string, number>());
   const assets = useQuery({
     queryKey: ["assets"],
     queryFn: () => api<Asset[]>("assets"),
@@ -52,19 +54,11 @@ export function AssetsView() {
         background,
       });
     },
-    enabled: !!assets.data?.length,
-    refetchInterval: (query) =>
-      query.state.data
-        ? priceRefreshInterval(query.state.data, pendingSince.current)
-        : false,
+    enabled: !!assets.data?.length && visible,
+    refetchInterval: priceRefreshInterval(visible, true),
     refetchIntervalInBackground: false,
     retry: false,
   });
-  const formatTime = (value: string) =>
-    new Intl.DateTimeFormat(locale, {
-      dateStyle: "short",
-      timeZone: "UTC",
-    }).format(new Date(value));
   const query = search.trim().toLocaleLowerCase(locale);
   const rows = (assets.data ?? [])
     .filter(
@@ -132,9 +126,7 @@ export function AssetsView() {
             {rows.map((asset) => {
               const status = prices.data?.find((q) => q.assetId === asset.id);
               const quote = status?.quote;
-              const pending =
-                !quote &&
-                (prices.isLoading || status?.error === "MARKET_PRICE_PENDING");
+              const pending = !quote && prices.isLoading;
               return (
                 <li
                   className="asset-row"
@@ -142,18 +134,8 @@ export function AssetsView() {
                   data-asset-id={asset.id}
                 >
                   <div className="asset-identity">
-                    <strong>
-                      {asset.assetType === "CRYPTO"
-                        ? asset.symbol.split("/")[0]
-                        : asset.symbol}
-                    </strong>
-                    <span>{asset.name}</span>
-                    <small>
-                      {t(`types.${asset.assetType}`)} · {asset.currency}
-                      {asset.assetType !== "CRYPTO" && asset.exchange
-                        ? ` · ${asset.exchange}`
-                        : ""}
-                    </small>
+                    <AssetListing listing={asset} />
+                    <ListingDetails listing={asset} />
                   </div>
                   <div className="asset-price">
                     <span className="asset-mobile-label">
@@ -167,30 +149,14 @@ export function AssetsView() {
                         pending ? t("investments.fetchingPrice") : undefined
                       }
                     />
-                    {quote?.stale && (
-                      <small className="negative">
-                        {t("investments.stale")}
-                      </small>
-                    )}
-                    {!quote && !pending && status?.error && (
-                      <small className="negative">
-                        {t.has(`errors.${status.error}`)
-                          ? t(`errors.${status.error}`)
-                          : t("errors.MARKET_UNAVAILABLE")}
-                      </small>
-                    )}
                   </div>
                   <div className="asset-price-date">
-                    {quote ? (
-                      <span>
-                        {t("assets.priceDate")}:{" "}
-                        <time dateTime={quote.tradingDate}>
-                          {formatTime(`${quote.tradingDate}T00:00:00Z`)}
-                        </time>
-                      </span>
-                    ) : (
-                      <span className="muted">{t("assets.notUpdated")}</span>
-                    )}
+                    <QuoteStatus
+                      showTimeLabel={false}
+                      quote={quote ?? null}
+                      error={status?.error ?? null}
+                      loading={pending}
+                    />
                     {asset.canDelete && (
                       <IconButton
                         label={t("assets.deleteNamed", { name: asset.name })}
