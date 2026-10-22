@@ -2012,11 +2012,140 @@ strong {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
+  column-gap: 24px;
+  row-gap: 4px;
   text-align: center;
   font-family: Georgia, "Times New Roman", serif;
   color: var(--muted);
   padding: 12px 16px;
   border-top: 1px solid var(--line);
+}
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 18px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.legal-links a,
+.legal-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--green);
+}
+.legal-links a:hover,
+.legal-back:hover {
+  text-decoration: underline;
+}
+.signup-legal,
+.signup-legal-draft {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.signup-legal {
+  color: #536269;
+}
+.signup-legal a,
+.legal-content a:not(.legal-back) {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.signup-legal-draft {
+  border-left: 3px solid #ad8743;
+  padding-left: 10px;
+  color: #74501a;
+}
+.terms-acceptance {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.auth-form .terms-acceptance input {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0;
+}
+.terms-acceptance label {
+  min-height: 44px;
+  padding-block: 10px;
+  cursor: pointer;
+}
+.terms-acceptance a {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.settings-layout .legal-links {
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+.legal-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+.legal-content {
+  width: min(760px, calc(100% - 40px));
+  margin: 24px auto 48px;
+  flex: 1;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+  font-size: 14px;
+}
+.legal-back {
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.legal-content h1 {
+  font-size: 28px;
+  color: #253d35;
+  margin-bottom: 8px;
+}
+.legal-content section {
+  margin-top: 28px;
+}
+.legal-content h2 {
+  margin-bottom: 10px;
+}
+.legal-content p + p {
+  margin-top: 12px;
+}
+.legal-draft {
+  margin: 24px 0;
+  padding: 16px;
+  border-left: 3px solid #ad8743;
+  background: #faf7ef;
+  color: #65491d;
+}
+.legal-contact {
+  margin-top: 16px;
+}
+.legal-contact dt {
+  font-weight: 600;
+  margin-top: 12px;
+}
+.legal-contact dd {
+  margin: 0;
+}
+.legal-deployment,
+.legal-review {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.legal-review {
+  margin-top: 32px;
+  font-size: 12px;
+  color: #536269;
 }
 @keyframes auth-appear {
   from {

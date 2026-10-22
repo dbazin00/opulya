@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import type { INestApplication } from "@nestjs/common";
-import { signupSchema, signupPasswordSchema } from "@opulya/shared";
+import {
+  signupSchema,
+  signupPasswordSchema,
+  termsVersion,
+} from "@opulya/shared";
 import { Database } from "../src/db.js";
 import { MailService } from "../src/mail.js";
 
@@ -11,7 +15,11 @@ process.env.EMAIL_SENDS_PER_DAY = "10000";
 // Financial fixtures authenticate through the real signup, verification and login endpoints.
 export function signupRequestBody(body: unknown) {
   if (!body || typeof body !== "object") return body;
-  const registration = { ...body } as Record<string, unknown>;
+  const registration: Record<string, unknown> = {
+    acceptTerms: true,
+    termsVersion,
+    ...body,
+  };
   // Fixture credentials are only used by verification and login, never by signup.
   delete registration.password;
   return registration;
@@ -24,7 +32,11 @@ export async function completeTestSignup(
 ) {
   const input = signupSchema
       .extend({ password: signupPasswordSchema })
-      .parse(body),
+      .parse({
+        acceptTerms: true,
+        termsVersion,
+        ...(body as Record<string, unknown>),
+      }),
     db = app.get(Database),
     mail = app.get(MailService);
   if (

@@ -76,7 +76,7 @@ test("public homepage is responsive, accessible and does not request private dat
   const faq = page.getByText("Are investment prices live?", { exact: true });
   await faq.click();
   await expect(
-    page.getByText(/No\. Available market prices are refreshed/),
+    page.getByText(/No\. Available market prices refresh approximately/),
   ).toBeVisible();
   await faq.click();
   expect(

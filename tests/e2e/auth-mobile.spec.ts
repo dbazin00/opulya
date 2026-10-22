@@ -25,7 +25,7 @@ for (const locale of ["en", "hr"] as const) {
           ),
         )
         .toBe(true);
-      await expect(page.locator(".auth-footer")).toHaveText(
+      await expect(page.locator(".auth-footer > span")).toHaveText(
         locale === "en"
           ? "Your finances, in perspective."
           : "Vaše financije, jasnija slika.",

@@ -14,6 +14,7 @@ import {
   balanceAdjustmentSchema,
   investmentSchema,
   signupSchema,
+  termsVersion,
   transactionSchema,
 } from "./validation.js";
 import {
@@ -388,6 +389,8 @@ describe("validation", () => {
         firstName: "A",
         lastName: "B",
         email: "  TEST@Example.com ",
+        acceptTerms: true,
+        termsVersion,
       }).email,
     ).toBe("test@example.com"));
   it("rejects signup role escalation and supplied user IDs", () => {
@@ -395,6 +398,8 @@ describe("validation", () => {
       firstName: "A",
       lastName: "B",
       email: "a@b.com",
+      acceptTerms: true,
+      termsVersion,
     };
     expect(signupSchema.safeParse({ ...user, role: "ADMIN" }).success).toBe(
       false,

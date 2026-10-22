@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { LanguageSelect } from "./language-select";
 import { BrandLink } from "./brand-link";
+import { LegalLinks } from "./legal-links";
 
 export function AuthShell({
   children,
@@ -39,7 +40,10 @@ export function AuthShell({
         </aside>
         {children}
       </main>
-      <footer className="auth-footer">{t("tagline")}</footer>
+      <footer className="auth-footer">
+        <span>{t("tagline")}</span>
+        <LegalLinks />
+      </footer>
     </div>
   );
 }

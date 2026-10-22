@@ -3,6 +3,7 @@ import "dotenv/config";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { termsVersion } from "@opulya/shared";
 import { ServiceUnavailableException } from "@nestjs/common";
 process.env.OPULYA_TEST = "1";
 process.env.NODE_ENV = "test";
@@ -39,7 +40,14 @@ test("email ownership verification and activation security", async (suite) => {
         "Content-Type": "application/json",
         Cookie: cookie,
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body:
+        body === undefined
+          ? undefined
+          : JSON.stringify(
+              path === "auth/signup"
+                ? { acceptTerms: true, termsVersion, ...(body as object) }
+                : body,
+            ),
     });
     return {
       status: response.status,

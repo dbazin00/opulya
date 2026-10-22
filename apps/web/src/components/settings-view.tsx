@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { Button, ErrorNotice, Field } from "./ui";
 import { useUser } from "./providers";
 import { LanguageSelect } from "./language-select";
+import { LegalLinks } from "./legal-links";
 export function SettingsView() {
   const t = useTranslations();
   const user = useUser();
@@ -85,6 +86,7 @@ export function SettingsView() {
             </Button>
           </div>
         </form>
+        <LegalLinks />
       </section>
     </div>
   );

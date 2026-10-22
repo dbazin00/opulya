@@ -22,6 +22,7 @@ import {
 import { formatMoney, resolveLocale } from "@opulya/shared";
 import { LanguageSelect } from "./language-select";
 import { BrandLink } from "./brand-link";
+import { LegalLinks } from "./legal-links";
 import styles from "./landing-page.module.css";
 
 const views = ["overview", "transactions", "investments"] as const;
@@ -395,6 +396,7 @@ export function LandingPage() {
           {t("brand")}
         </Link>
         <p>{t("landing.disclaimer")}</p>
+        <LegalLinks />
       </footer>
     </div>
   );

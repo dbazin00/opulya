@@ -23,6 +23,7 @@ import {
   settingsSchema,
   signupSchema,
   verifyEmailSchema,
+  termsVersion,
 } from "@opulya/shared";
 import { Database } from "./db.js";
 import { MailService } from "./mail.js";
@@ -149,6 +150,8 @@ export class AuthService implements OnModuleDestroy {
         email: input.email,
         locale: input.locale,
         timeZone: input.timeZone,
+        termsVersion,
+        termsAcceptedAt: new Date(),
       },
       select: { id: true, email: true, firstName: true, locale: true },
     });

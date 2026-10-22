@@ -17,6 +17,7 @@ import {
   passwordMaxLength,
   passwordMinLength,
   signupPasswordSchema,
+  termsVersion,
 } from "@opulya/shared";
 import { api, ApiError } from "@/lib/api";
 import {
@@ -30,10 +31,12 @@ export function AuthForm({
   signup,
   verify = false,
   pending = false,
+  legalDraft = false,
 }: {
   signup: boolean;
   verify?: boolean;
   pending?: boolean;
+  legalDraft?: boolean;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -56,6 +59,8 @@ export function AuthForm({
   const newPassword = verify;
   const repeatInput = useRef<HTMLInputElement>(null);
   const rulesId = useId();
+  const termsId = useId();
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const lengthMet = signupPasswordSchema.safeParse(password).success;
   const matchMet = password.length > 0 && password === repeatPassword;
   const rules = [
@@ -115,6 +120,10 @@ export function AuthForm({
     event.preventDefault();
     if (pending && (!pendingLoaded || remaining > 0)) return;
     const form = event.currentTarget;
+    if (signup && !acceptTerms) {
+      form.reportValidity();
+      return;
+    }
     const data = Object.fromEntries(new FormData(form));
     if (
       newPassword &&
@@ -139,6 +148,8 @@ export function AuthForm({
             ? {
                 locale,
                 timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                acceptTerms,
+                termsVersion,
               }
             : {}),
         },
@@ -408,10 +419,72 @@ export function AuthForm({
             )}
             <ErrorNotice error={error} />
             {signup && (
-              <p className="auth-verification-hint">
-                <MailCheck size={17} aria-hidden="true" />
-                <span>{t("auth.signupVerificationHint")}</span>
-              </p>
+              <>
+                <p className="auth-verification-hint">
+                  <MailCheck size={17} aria-hidden="true" />
+                  <span>{t("auth.signupVerificationHint")}</span>
+                </p>
+                <p className="signup-legal">
+                  {t.rich("legal.signupNotice", {
+                    terms: (text) => (
+                      <Link
+                        href="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {text}
+                      </Link>
+                    ),
+                    privacy: (text) => (
+                      <Link
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {text}
+                      </Link>
+                    ),
+                    security: (text) => (
+                      <Link
+                        href="/security"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {text}
+                      </Link>
+                    ),
+                  })}
+                </p>
+                <div className="terms-acceptance">
+                  <input
+                    id={termsId}
+                    name="acceptTerms"
+                    type="checkbox"
+                    checked={acceptTerms}
+                    required
+                    disabled={busy}
+                    onChange={(event) => setAcceptTerms(event.target.checked)}
+                  />
+                  <label htmlFor={termsId}>
+                    {t.rich("legal.acceptTerms", {
+                      terms: (text) => (
+                        <Link
+                          href="/terms"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {text}
+                        </Link>
+                      ),
+                    })}
+                  </label>
+                </div>
+                {legalDraft && (
+                  <p className="signup-legal-draft" role="note">
+                    {t("legal.signupDraft")}
+                  </p>
+                )}
+              </>
             )}
             {resent && (
               <p className="notice" role="status">
@@ -425,7 +498,8 @@ export function AuthForm({
               disabled={
                 (newPassword && (!lengthMet || !matchMet)) ||
                 (verify && !token) ||
-                (pending && remaining > 0)
+                (pending && remaining > 0) ||
+                (signup && !acceptTerms)
               }
             >
               {t(

@@ -21,6 +21,12 @@ test("signup requires explicit mailbox verification and supports localized resen
   await expect(page.locator('input[type="password"]')).toHaveCount(0);
   await expect(page.locator(".password-requirements")).toHaveCount(0);
   await page
+    .getByRole("checkbox", {
+      name: "I agree to the Terms of Use.",
+      exact: true,
+    })
+    .check();
+  await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
   await expect(page).toHaveURL(/\/check-email$/);

@@ -56,6 +56,7 @@ export const signupPasswordSchema = z
   .string()
   .min(passwordMinLength)
   .max(passwordMaxLength);
+export const termsVersion = "2026-10-22";
 export const signupSchema = z
   .object({
     firstName: name,
@@ -63,6 +64,8 @@ export const signupSchema = z
     email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
     locale: localeSchema.default("en"),
     timeZone: timeZoneSchema.default("Europe/Zagreb"),
+    acceptTerms: z.literal(true),
+    termsVersion: z.literal(termsVersion),
   })
   .strict();
 export const loginSchema = z

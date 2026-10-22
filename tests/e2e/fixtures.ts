@@ -4,7 +4,12 @@ import { createHash, randomUUID } from "node:crypto";
 import { readFile, unlink } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-import { assetTypes, signupSchema, signupPasswordSchema } from "@opulya/shared";
+import {
+  assetTypes,
+  signupSchema,
+  signupPasswordSchema,
+  termsVersion,
+} from "@opulya/shared";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../apps/api/src/generated/prisma/client";
 
@@ -184,7 +189,11 @@ export const test = base.extend<{
         const input = signingUp
           ? signupSchema
               .extend({ password: signupPasswordSchema })
-              .parse(options?.data)
+              .parse({
+                acceptTerms: true,
+                termsVersion,
+                ...(options?.data as Record<string, unknown>),
+              })
           : undefined;
         const registration = input
           ? ({ ...input } as Partial<typeof input>)

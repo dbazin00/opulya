@@ -59,6 +59,7 @@ export default defineConfig({
       env: {
         API_INTERNAL_URL: "http://127.0.0.1:4001",
         NEXT_DIST_DIR: ".next-e2e",
+        LEGAL_NOTICE_REVIEWED: "false",
         NODE_ENV: "development",
       },
     },

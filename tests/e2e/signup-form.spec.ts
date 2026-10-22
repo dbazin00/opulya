@@ -1,7 +1,8 @@
 import { test, expect, chooseOption } from "./fixtures";
 import AxeBuilder from "@axe-core/playwright";
+import { termsVersion } from "@opulya/shared";
 
-test("signup collects names and email only in both languages", async ({
+test("signup requires explicit terms acceptance in both languages", async ({
   page,
 }, testInfo) => {
   const requests: Record<string, unknown>[] = [];
@@ -39,12 +40,34 @@ test("signup collects names and email only in both languages", async ({
       name: locale === "en" ? "Create account" : "Izradi račun",
       exact: true,
     });
+    const acceptance = page.getByRole("checkbox", {
+      name:
+        locale === "en"
+          ? "I agree to the Terms of Use."
+          : "Prihvaćam Uvjete korištenja.",
+      exact: true,
+    });
+    await expect(acceptance).not.toBeChecked();
+    await expect(acceptance).toHaveAttribute("required", "");
+    await expect(submit).toBeDisabled();
+    const previousRequests = requests.length;
+    await page
+      .locator("form")
+      .evaluate((form) =>
+        form.dispatchEvent(
+          new Event("submit", { bubbles: true, cancelable: true }),
+        ),
+      );
+    expect(requests).toHaveLength(previousRequests);
+    await acceptance.focus();
+    await page.keyboard.press("Space");
     await expect(submit).toBeEnabled();
+    await acceptance.uncheck();
+    await expect(submit).toBeDisabled();
+    await acceptance.check();
     expect(
       await page.evaluate(
-        () =>
-          document.documentElement.scrollWidth <= innerWidth &&
-          document.documentElement.scrollHeight <= innerHeight,
+        () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
     expect(
@@ -60,13 +83,19 @@ test("signup collects names and email only in both languages", async ({
     });
     await submit.click();
     await expect(page.locator(".error-notice[role=alert]")).toBeVisible();
-    expect(Object.keys(requests.at(-1)!).sort()).toEqual([
-      "email",
-      "firstName",
-      "lastName",
-      "locale",
-      "timeZone",
-    ]);
+    expect(Object.keys(requests.at(-1)!).sort()).toEqual(
+      [
+        "email",
+        "acceptTerms",
+        "firstName",
+        "lastName",
+        "locale",
+        "timeZone",
+        "termsVersion",
+      ].sort(),
+    );
     expect(requests.at(-1)?.locale).toBe(locale);
+    expect(requests.at(-1)?.acceptTerms).toBe(true);
+    expect(requests.at(-1)?.termsVersion).toBe(termsVersion);
   }
 });

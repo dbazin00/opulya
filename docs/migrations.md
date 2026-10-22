@@ -8,6 +8,8 @@ The active schema starts with `prisma/migrations/0_init/migration.sql`. `migrati
 
 `20261021120000_on_demand_quotes` removes the disposable price cache and obsolete scheduler fields. It preserves accounts, assets and investment history; no database reset is needed.
 
+`20261022120000_terms_acceptance` adds nullable `User.termsVersion` and `User.termsAcceptedAt` fields with a paired-value constraint. Existing users remain unchanged; acceptance is never backfilled. Apply before deploying the updated signup API.
+
 The final schema includes three checks not represented by Prisma's datamodel:
 
 - `Transaction_hidden_balance_only`: only adjustments can be hidden.

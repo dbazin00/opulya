@@ -6,6 +6,7 @@ Implementation is informed by OWASP guidance, not certified or formally complian
 
 - Emails are normalized; strict request schemas reject roles, user IDs and unknown fields.
 - Signup creates a pending user without a password/session. Email verification sets the password and activates the account atomically; signup/resend use generic acknowledgements.
+- New signup requires explicit acceptance of the shared `termsVersion`. The server timestamps acceptance when creating the pending user; repeat signup never changes existing acceptance. This is a signup declaration, not independently verified identity or GDPR consent. Existing users are not backfilled or forced through reacceptance. Preserve released terms in version control and bump `termsVersion` when changing them.
 - Passwords use Argon2id with 64 MiB memory, three iterations and one lane. Verification enforces 15-128 characters without composition rules. Login uses generic errors and dummy hash verification for unknown users.
 - Sessions use random 256-bit tokens in HttpOnly, host-only, SameSite=Strict cookies. Only SHA-256 token hashes are stored. Production cookies are Secure with the `__Host-` prefix.
 - Server-enforced expiration defaults to eight hours absolute and fifteen minutes idle. Logout revokes the database session and clears its cookie. Automated market polling does not renew idle expiry.

@@ -515,6 +515,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  flex-wrap: wrap;
   padding: 28px 36px;
 }
 .footer .brand {

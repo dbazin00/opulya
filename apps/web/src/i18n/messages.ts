@@ -1,4 +1,7 @@
+import { enLegal, hrLegal } from "./legal";
+
 export const en = {
+  legal: enLegal,
   brand: "Opulya",
   tagline: "Your finances, in perspective.",
   landing: {
@@ -555,6 +558,7 @@ export const en = {
 };
 
 export const hr: typeof en = {
+  legal: hrLegal,
   brand: "Opulya",
   tagline: "Vaše financije, jasnija slika.",
   landing: {

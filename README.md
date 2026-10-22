@@ -47,6 +47,8 @@ npm run start --workspace @opulya/web
 
 Run the API and web app as separate services. Compose supplies local PostgreSQL only. Before deploying, review the security, database and market-data guides below. For a populated database, follow the migration guide rather than applying the initial SQL directly.
 
+Public privacy, security and terms pages are drafts until reviewed. Configure the web service's `LEGAL_OPERATOR_NAME` (an individual or business), `LEGAL_CONTACT_EMAIL`, `LEGAL_RETENTION_DETAILS` and `LEGAL_TRANSFER_DETAILS`; use the latter two for the actual deployment's retention/deletion schedule and processing locations/transfer safeguards. Set `LEGAL_NOTICE_REVIEWED=true` only after legal and operational review. This does not certify compliance. Account deletion/export requests, provider agreements and incident response still need an operator-run process.
+
 ## Documentation
 
 - [Database credentials and test setup](docs/database-credentials.md)

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { testDatabaseUrl } from "../../../packages/config/test-database.js";
 import { AuthService } from "../src/auth.js";
+import { termsVersion } from "@opulya/shared";
 import { Database } from "../src/db.js";
 import {
   MailService,
@@ -44,7 +45,13 @@ test("persistent verification email budgets", async (suite) => {
   } as MailService;
   const signup = (email: string) => {
     assert.ok(auth);
-    return auth.signup({ firstName: "Budget", lastName: "Fixture", email });
+    return auth.signup({
+      firstName: "Budget",
+      lastName: "Fixture",
+      email,
+      acceptTerms: true,
+      termsVersion,
+    });
   };
   const resend = (email: string) => {
     assert.ok(auth);

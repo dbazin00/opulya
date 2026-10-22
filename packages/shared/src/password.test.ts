@@ -4,6 +4,7 @@ import {
   signupPasswordSchema,
   signupSchema,
   verifyEmailSchema,
+  termsVersion,
 } from "./validation.js";
 
 describe("verification password policy", () => {
@@ -32,6 +33,8 @@ describe("verification password policy", () => {
       firstName: "Test",
       lastName: "User",
       email: "test@example.test",
+      acceptTerms: true,
+      termsVersion,
     };
     expect(signupSchema.parse(user)).not.toHaveProperty("password");
     expect(

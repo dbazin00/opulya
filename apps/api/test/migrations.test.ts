@@ -71,6 +71,7 @@ test("migrations create the final schema on an empty database", async (suite) =>
             "20261018120000_monthly_budgets",
             "20261020120000_instrument_exchange_name",
             "20261021120000_on_demand_quotes",
+            "20261022120000_terms_acceptance",
           ],
         );
         for (const table of [
@@ -118,6 +119,7 @@ test("migrations create the final schema on an empty database", async (suite) =>
             "InvestmentTransaction_no_self_correction",
             "Transaction_hidden_balance_only",
             "Transaction_opening_balance_only",
+            "User_terms_acceptance_check",
           ],
         );
       },

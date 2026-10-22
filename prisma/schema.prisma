@@ -52,6 +52,8 @@ model User {
   firstName                  String
   lastName                   String
   email                      String                  @unique
+  termsVersion               String?                 @db.VarChar(32)
+  termsAcceptedAt            DateTime?               @db.Timestamptz(6)
   passwordHash               String?
   emailVerifiedAt            DateTime?               @db.Timestamptz(6)
   emailVerificationTokenHash String?                 @unique
