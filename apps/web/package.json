@@ -7,7 +7,7 @@
     "dev": "next dev --hostname localhost",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
     "@opulya/shared": "0.0.0",
