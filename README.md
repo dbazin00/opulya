@@ -1,6 +1,7 @@
 # Opulya
 
 [![Unit tests and coverage](https://github.com/dbazin00/opulya/actions/workflows/coverage.yml/badge.svg?branch=main)](https://github.com/dbazin00/opulya/actions/workflows/coverage.yml)
+[![Unit line coverage](https://dbazin00.github.io/opulya/coverage.svg)](https://github.com/dbazin00/opulya/actions/workflows/coverage.yml)
 
 Personal finance and investment tracking with English and Croatian interfaces. Built with Next.js, NestJS, PostgreSQL and Prisma in an npm workspace.
 
@@ -37,7 +38,9 @@ npm run test:e2e
 
 Integration and browser tests require the separate `opulya_test` database; see [test database setup](docs/database-credentials.md#test-database). Browser tests use installed Edge on Windows. Elsewhere, install Chromium with `npm exec -- playwright install chromium`.
 
-Unit coverage includes untested API, web and shared source, excluding generated code and tests. Open `coverage/unit/index.html` locally, or view percentages in the GitHub Actions summary and download its `unit-coverage` artifact (retained for 14 days). The README badge shows workflow status, not a percentage. Integration/browser coverage is not yet collected; no percentage threshold is enforced. No additional account or repository secrets are required.
+Unit coverage includes untested API, web and shared source, excluding generated code and tests. Open `coverage/unit/index.html` locally, or view percentages in the GitHub Actions summary and download its `unit-coverage` artifact (retained for 14 days). The badges show workflow status and unit line coverage from the latest successful `main` run. Integration/browser coverage is not yet collected; no percentage threshold is enforced.
+
+For the percentage badge, set **Settings > Pages > Build and deployment > Source** to **GitHub Actions** once, before pushing these changes. Only the generated SVG is published to Pages; detailed reports stay in Actions artifacts. No extra account, repository secrets or automatic commits are needed. The badge appears after the first successful deployment and may briefly show a cached result.
 
 ## Deployment
 
