@@ -1,0 +1,84 @@
+name: Unit tests and coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coverage-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Prisma generation requires a URL; this job has no database or credentials.
+      DATABASE_URL: postgresql://localhost:5434/opulya_test
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Generate Prisma client without connecting to a database
+        run: npm run db:generate
+
+      - name: Check types
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
+
+      - name: Summarize unit coverage
+        if: ${{ !cancelled() && hashFiles('coverage/unit/coverage-summary.json') != '' }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, readFileSync } from 'node:fs';
+          const { total } = JSON.parse(readFileSync('coverage/unit/coverage-summary.json', 'utf8'));
+          const metrics = ['statements', 'branches', 'functions', 'lines'];
+          const rows = metrics.map((name) => {
+            const { pct, covered, total: count } = total[name];
+            if (![pct, covered, count].every(Number.isFinite)) throw new Error('Invalid coverage summary');
+            return `| ${name} | ${pct}% | ${covered} / ${count} |`;
+          });
+          const summary = [
+            '## Unit Test Coverage',
+            '',
+            '| Metric | Coverage | Covered / Total |',
+            '| --- | ---: | ---: |',
+            ...rows,
+            '',
+            'Includes untested application source. Excludes generated code and test files.',
+            'API integration and Playwright browser tests are not included in these percentages.',
+            'Download the unit-coverage artifact and open index.html for file-level detail.',
+            '',
+          ].join('\n');
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+          NODE
+
+      - name: Store coverage report
+        if: ${{ !cancelled() && hashFiles('coverage/unit/coverage-summary.json') != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: unit-coverage
+          path: coverage/unit/
+          retention-days: 14
+          if-no-files-found: error

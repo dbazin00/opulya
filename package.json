@@ -21,6 +21,7 @@
     "typecheck:tooling": "tsc --project tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:integration": "tsx --tsconfig apps/api/tsconfig.typecheck.json --test --test-concurrency=1 apps/api/test/integration.test.ts apps/api/test/market.test.ts apps/api/test/auth-throttle.test.ts apps/api/test/balance-snapshots.test.ts apps/api/test/category-lifecycle.test.ts apps/api/test/account-lifecycle.test.ts apps/api/test/asset-library.test.ts apps/api/test/instrument-directory.test.ts apps/api/test/investment-corrections.test.ts apps/api/test/email-verification.test.ts apps/api/test/email-send-limits.test.ts apps/api/test/budgets.test.ts apps/api/test/migrations.test.ts apps/api/test/terms-acceptance.test.ts",
     "test:e2e": "playwright test",
     "db:generate": "prisma generate",
@@ -36,17 +37,19 @@
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
     "@types/node": "22.20.4",
+    "@vitest/coverage-v8": "5.0.3",
     "concurrently": "9.2.5",
     "dotenv": "17.4.2",
     "eslint": "10.11.0",
+    "prettier": "3.9.9",
     "prisma": "7.10.0",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.0",
-    "vitest": "5.0.3",
-    "prettier": "3.9.9"
+    "vitest": "5.0.3"
   },
   "overrides": {
+    "vite": "8.3.5",
     "deepmerge-ts": "8.0.2",
     "mysql2": "3.24.5"
   }

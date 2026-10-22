@@ -11,6 +11,7 @@ export default ts.config(
       ".runtime/**",
       ".npm-cache/**",
       "test-results/**",
+      "coverage/**",
       "apps/web/next-env.d.ts",
     ],
   },
