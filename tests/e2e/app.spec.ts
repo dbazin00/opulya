@@ -41,6 +41,12 @@ test("register, manage finances, drill down, localize and render responsively", 
   await page.getByLabel("Last name", { exact: true }).fill("Test");
   const email = `browser-${randomUUID()}@example.test`;
   await page.getByLabel("Email address").fill(email);
+  await expect(
+    page.getByRole("button", { name: "Create account", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("checkbox", { name: "I agree to the Terms of Use." })
+    .check();
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
@@ -234,7 +240,11 @@ test("register, manage finances, drill down, localize and render responsively", 
     clientRequestId: randomUUID(),
   });
   await page.goto("/investments");
-  await expect(page.getByText("VWCE", { exact: true })).toBeVisible();
+  await expect(
+    page
+      .locator(".holding .listing-identity")
+      .getByText("VWCE", { exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByText("Market data is not configured.", { exact: true }),
   ).toBeVisible();

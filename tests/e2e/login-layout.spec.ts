@@ -81,8 +81,12 @@ test("login and signup share header, footer and content widths across screen siz
           () => document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
-      for (const input of await page.locator(".auth-form input").all()) {
-        const bounds = await input.boundingBox();
+      for (const control of await page
+        .locator(
+          '.auth-form input:not([type="checkbox"]), .terms-acceptance label',
+        )
+        .all()) {
+        const bounds = await control.boundingBox();
         expect(bounds!.height).toBeGreaterThanOrEqual(44);
         expect(bounds!.y).toBeGreaterThanOrEqual(login.header.height);
         expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(signup.footer.y);
