@@ -72,6 +72,7 @@ test("migrations create the final schema on an empty database", async (suite) =>
             "20261020120000_instrument_exchange_name",
             "20261021120000_on_demand_quotes",
             "20261022120000_terms_acceptance",
+            "20261024120000_investment_budgets",
           ],
         );
         for (const table of [
@@ -116,6 +117,7 @@ test("migrations create the final schema on an empty database", async (suite) =>
           [
             "Budget_amount_check",
             "Budget_month_check",
+            "Budget_target_check",
             "InvestmentTransaction_no_self_correction",
             "Transaction_hidden_balance_only",
             "Transaction_opening_balance_only",
@@ -143,6 +145,36 @@ test("migrations create the final schema on an empty database", async (suite) =>
         error.constraint === name;
     await db.query(
       `INSERT INTO "Category" (id,"userId",type,name,"updatedAt") VALUES ('category-a','u-a','EXPENSE','Budget fixture',now())`,
+    );
+    await db.query(
+      `INSERT INTO "Asset" (id,"userId",symbol,name,"assetType",currency,"updatedAt") VALUES ('asset-a','u-a','IWDA.AS','Fixture ETF','ETF','EUR',now())`,
+    );
+    await suite.test(
+      "enforces exactly one budget target and asset ownership",
+      async () => {
+        const insert = (
+          user: string,
+          categoryId: string | null,
+          assetId: string | null,
+        ) =>
+          db.query(
+            'INSERT INTO "Budget" (id,"userId","categoryId","assetId",currency,month,scope,amount,"updatedAt") VALUES ($1,$2,$3,$4,\'EUR\',\'2026-03\',\'RECURRING\',100,now())',
+            [randomUUID(), user, categoryId, assetId],
+          );
+        await assert.rejects(
+          insert("u-a", null, null),
+          constraint("Budget_target_check"),
+        );
+        await assert.rejects(
+          insert("u-a", "category-a", "asset-a"),
+          constraint("Budget_target_check"),
+        );
+        await assert.rejects(
+          insert("u-b", null, "asset-a"),
+          constraint("Budget_assetId_userId_fkey", "23503"),
+        );
+        await insert("u-a", null, "asset-a");
+      },
     );
     await suite.test(
       "enforces budget amounts, months and category ownership at the database boundary",

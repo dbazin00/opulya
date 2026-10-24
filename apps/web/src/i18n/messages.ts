@@ -308,7 +308,22 @@ export const en = {
   },
   budgets: {
     title: "Budgets",
-    subtitle: "A monthly plan for every category.",
+    subtitle: "Your monthly spending, income and investment plan.",
+    investments: "Investments",
+    addInvestment: "Add investment goal",
+    editInvestment: "Edit investment goal",
+    selectedAssets: "Investment goals",
+    invested: "Purchased toward goals",
+    leftToInvest: "Left to invest",
+    purchased: "Purchases + fees",
+    allPurchases: "Total purchases + fees",
+    emptyInvestments: "No investment goals this month",
+    noAssets: "No assets in this currency",
+    deleteAssetConfirm:
+      "Permanently delete all goals for this asset in {currency}, including past months, repeating goals and month overrides? The asset and its investment activity will not be deleted. This cannot be undone.",
+    add: "Add budget",
+    emptyMonth: "No budgets this month",
+    selectedCategories: "Budgeted categories",
     expenses: "Expense limits",
     income: "Income targets",
     planned: "Planned",
@@ -334,6 +349,11 @@ export const en = {
     paused: "Not budgeted this month",
     amount: "Monthly amount",
     remove: "Remove budget",
+    removeNamed: "Remove budget for {name}",
+    delete: "Delete permanently",
+    deleteAll: "All months, permanently",
+    deleteConfirm:
+      "Permanently delete all budgets for this category in {currency}, including past months, repeating budgets and month overrides? Transactions, the category itself and subcategory budgets will not be deleted. This cannot be undone.",
     stop: "Stop repeating from this month",
     reset: "Use repeating amount",
     resetNone: "Remove month override",
@@ -544,6 +564,8 @@ export const en = {
     MARKET_UNAVAILABLE: "Market data is temporarily unavailable.",
     ASSET_HAS_TRANSACTIONS:
       "This asset has investment history and cannot be deleted.",
+    ASSET_HAS_BUDGETS:
+      "Permanently delete this asset's investment goals before deleting the asset.",
     MARKET_SYMBOL_NOT_FOUND:
       "The market-data provider could not find this exact listing.",
     MARKET_NOT_CONFIGURED: "Market data is not configured.",
@@ -867,7 +889,22 @@ export const hr: typeof en = {
   },
   budgets: {
     title: "Budžeti",
-    subtitle: "Mjesečni plan za svaku kategoriju.",
+    subtitle: "Vaš mjesečni plan potrošnje, prihoda i ulaganja.",
+    investments: "Ulaganja",
+    addInvestment: "Dodaj cilj ulaganja",
+    editInvestment: "Uredi cilj ulaganja",
+    selectedAssets: "Ciljevi ulaganja",
+    invested: "Kupljeno prema ciljevima",
+    leftToInvest: "Preostalo za ulaganje",
+    purchased: "Kupnje + naknade",
+    allPurchases: "Ukupne kupnje + naknade",
+    emptyInvestments: "Nema ciljeva ulaganja za ovaj mjesec",
+    noAssets: "Nema instrumenata u ovoj valuti",
+    deleteAssetConfirm:
+      "Trajno izbrisati sve ciljeve ovog instrumenta u valuti {currency}, uključujući prethodne mjesece, ponavljajuće ciljeve i mjesečne iznimke? Instrument i njegova povijest ulaganja neće biti izbrisani. Ovu radnju nije moguće poništiti.",
+    add: "Dodaj budžet",
+    emptyMonth: "Nema budžeta za ovaj mjesec",
+    selectedCategories: "Kategorije u budžetu",
     expenses: "Plan rashoda",
     income: "Ciljevi prihoda",
     planned: "Planirano",
@@ -893,6 +930,11 @@ export const hr: typeof en = {
     paused: "Bez budžeta ovaj mjesec",
     amount: "Mjesečni iznos",
     remove: "Ukloni budžet",
+    removeNamed: "Ukloni budžet za {name}",
+    delete: "Trajno izbriši",
+    deleteAll: "Svi mjeseci, trajno",
+    deleteConfirm:
+      "Trajno izbrisati sve budžete ove kategorije u valuti {currency}, uključujući prethodne mjesece, ponavljajuće budžete i mjesečne iznimke? Transakcije, sama kategorija i budžeti potkategorija neće biti izbrisani. Ovu radnju nije moguće poništiti.",
     stop: "Zaustavi ponavljanje od ovog mjeseca",
     reset: "Koristi ponavljajući iznos",
     resetNone: "Ukloni mjesečnu iznimku",
@@ -1106,6 +1148,8 @@ export const hr: typeof en = {
     MARKET_UNAVAILABLE: "Tržišni podaci trenutačno nisu dostupni.",
     ASSET_HAS_TRANSACTIONS:
       "Ovaj instrument ima povijest ulaganja i ne može se obrisati.",
+    ASSET_HAS_BUDGETS:
+      "Prije brisanja instrumenta trajno izbrišite njegove ciljeve ulaganja.",
     MARKET_SYMBOL_NOT_FOUND:
       "Pružatelj tržišnih podataka nije pronašao ovu točnu kotaciju.",
     MARKET_NOT_CONFIGURED: "Tržišni podaci nisu konfigurirani.",

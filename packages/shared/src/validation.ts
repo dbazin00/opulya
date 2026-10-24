@@ -126,18 +126,28 @@ export const budgetQuerySchema = z
   .object({
     month: budgetMonth,
     currency: currencySchema.default("EUR"),
-    type: z.enum(["INCOME", "EXPENSE"]).default("EXPENSE"),
+    type: z.enum(["INCOME", "EXPENSE", "INVESTMENT"]).default("EXPENSE"),
   })
   .strict();
-export const budgetKeySchema = z
+const categoryBudgetKey = z
   .object({ categoryId: id, currency: currencySchema, month: budgetMonth })
   .strict();
-export const budgetWriteSchema = budgetKeySchema
-  .extend({
-    scope: z.enum(["RECURRING", "MONTH"]),
-    amount: nonnegative.nullable(),
-  })
+const assetBudgetKey = z
+  .object({ assetId: id, currency: currencySchema, month: budgetMonth })
   .strict();
+export const budgetKeySchema = z.union([categoryBudgetKey, assetBudgetKey]);
+export const budgetDeleteSchema = z.union([
+  categoryBudgetKey.omit({ month: true }),
+  assetBudgetKey.omit({ month: true }),
+]);
+const budgetValue = {
+  scope: z.enum(["RECURRING", "MONTH"]),
+  amount: nonnegative.nullable(),
+};
+export const budgetWriteSchema = z.union([
+  categoryBudgetKey.extend(budgetValue),
+  assetBudgetKey.extend(budgetValue),
+]);
 export const transactionSchema = z
   .object({
     type: z.enum(transactionTypes),

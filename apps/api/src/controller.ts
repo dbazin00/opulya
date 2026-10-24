@@ -43,6 +43,12 @@ export class FinanceController {
   @Post("budgets") saveBudget(@Req() req: AuthRequest, @Body() body: unknown) {
     return this.budgets.save(req.user.id, body);
   }
+  @Delete("budgets") deleteBudget(
+    @Req() req: AuthRequest,
+    @Body() body: unknown,
+  ) {
+    return this.budgets.delete(req.user.id, body);
+  }
   @Delete("budgets/override") resetBudget(
     @Req() req: AuthRequest,
     @Body() body: unknown,
@@ -176,7 +182,7 @@ export class FinanceController {
       where: { userId: req.user.id },
       orderBy: { symbol: "asc" },
       include: {
-        _count: { select: { transactions: true } },
+        _count: { select: { transactions: true, budgets: true } },
         instrument: {
           select: {
             symbol: true,
@@ -189,7 +195,7 @@ export class FinanceController {
     });
     return rows.map(({ _count, instrument, ...asset }) => ({
       ...asset,
-      canDelete: _count.transactions === 0,
+      canDelete: _count.transactions === 0 && _count.budgets === 0,
       sourceSymbol: instrument?.symbol ?? null,
       exchangeName: instrument?.exchangeName ?? null,
       mic: instrument?.mic ?? "",

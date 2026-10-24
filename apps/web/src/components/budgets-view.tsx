@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronRight,
   Pencil,
   Plus,
   Repeat2,
-  RotateCcw,
   Trash2,
 } from "lucide-react";
 import {
@@ -22,13 +21,14 @@ import {
 } from "@opulya/shared";
 import { api, queryString } from "@/lib/api";
 import type { Category } from "@/lib/types";
+import { budgetCategories } from "@/lib/budget-categories";
 import { categoryName, categoryPath } from "./forms";
-import { Dropdown } from "./dropdown";
+import { BudgetForm, BudgetRemoval } from "./budget-forms";
+import { InvestmentBudgetsView } from "./investment-budgets-view";
 import {
   Button,
   Empty,
   ErrorNotice,
-  Field,
   IconButton,
   Loading,
   Modal,
@@ -38,7 +38,6 @@ import {
 import styles from "./budgets-view.module.css";
 
 type BudgetReport = ReturnType<typeof monthlyBudgets>;
-type BudgetRow = BudgetReport["rows"][number];
 
 export function BudgetsView({
   month,
@@ -50,10 +49,67 @@ export function BudgetsView({
   categories: Category[];
 }) {
   const t = useTranslations();
+  const [type, setType] = useState<"EXPENSE" | "INCOME" | "INVESTMENT">(
+    "EXPENSE",
+  );
+  const tabs = (
+    <div
+      className={`segmented ${styles.tabs}`}
+      role="group"
+      aria-label={t("common.type")}
+    >
+      {(["EXPENSE", "INCOME", "INVESTMENT"] as const).map((value) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={type === value}
+          className={type === value ? "selected" : ""}
+          onClick={() => setType(value)}
+        >
+          {t(
+            value === "EXPENSE"
+              ? "budgets.expenses"
+              : value === "INCOME"
+                ? "budgets.income"
+                : "budgets.investments",
+          )}
+        </button>
+      ))}
+    </div>
+  );
+  return type === "INVESTMENT" ? (
+    <InvestmentBudgetsView month={month} currency={currency} tabs={tabs} />
+  ) : (
+    <CategoryBudgetsView
+      key={type}
+      month={month}
+      currency={currency}
+      categories={categories}
+      type={type}
+      tabs={tabs}
+    />
+  );
+}
+
+function CategoryBudgetsView({
+  month,
+  currency,
+  categories,
+  type,
+  tabs,
+}: {
+  month: string;
+  currency: string;
+  categories: Category[];
+  type: "EXPENSE" | "INCOME";
+  tabs: ReactNode;
+}) {
+  const t = useTranslations();
   const locale = resolveLocale(useLocale());
-  const [type, setType] = useState<"EXPENSE" | "INCOME">("EXPENSE");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<string>();
+  const [adding, setAdding] = useState(false);
+  const [removing, setRemoving] = useState<Category>();
   const query = useQuery({
     queryKey: ["budgets", month, currency, type],
     queryFn: () =>
@@ -65,21 +121,47 @@ export function BudgetsView({
     sensitivity: "base",
     numeric: true,
   });
-  const visible = categories
+  const ordered = categories
     .filter((c) => c.type === type)
-    .filter(
-      (c) =>
-        !c.archivedAt ||
-        byId.get(c.id)?.amount != null ||
-        decimal(byId.get(c.id)?.actual ?? "0").gt(0),
-    )
     .sort(
       (a, b) =>
         collator.compare(categoryName(a, t), categoryName(b, t)) ||
         a.id.localeCompare(b.id),
     );
-  const rows = categoryTree(visible, collapsed);
+  const chosen = budgetCategories(ordered, report?.rows ?? []);
+  const chosenIds = new Set(chosen.map((c) => c.id));
+  const rows = categoryTree(chosen, collapsed);
+  const available = ordered
+    .filter((c) => !c.archivedAt && !chosenIds.has(c.id))
+    .map((c) => ({ id: c.id, label: categoryPath(c, categories, t) }))
+    .sort((a, b) => collator.compare(a.label, b.label));
+  const originals = new Map(categories.map((c) => [c.id, c]));
   const current = categories.find((c) => c.id === selected);
+  function closeEditor() {
+    setSelected(undefined);
+    setAdding(false);
+  }
+  function addBudget() {
+    if (!available.length) return;
+    setAdding(true);
+    setSelected(available[0]!.id);
+  }
+  function finishEditing() {
+    if (adding && current) {
+      setCollapsed((previous) => {
+        const next = new Set(previous);
+        const visited = new Set([current.id]);
+        let parent = current.parentId;
+        while (parent && !visited.has(parent)) {
+          visited.add(parent);
+          next.delete(parent);
+          parent = originals.get(parent)?.parentId ?? null;
+        }
+        return next;
+      });
+    }
+    closeEditor();
+  }
   const actualLabel = t(
     type === "EXPENSE" ? "budgets.actual" : "budgets.actualIncome",
   );
@@ -91,25 +173,18 @@ export function BudgetsView({
   );
   return (
     <>
-      <div
-        className={`segmented ${styles.tabs}`}
-        role="group"
-        aria-label={t("common.type")}
-      >
-        {(["EXPENSE", "INCOME"] as const).map((value) => (
-          <button
-            key={value}
+      <div className={styles.toolbar}>
+        {tabs}
+        {!!rows.length && (
+          <Button
             type="button"
-            aria-pressed={type === value}
-            className={type === value ? "selected" : ""}
-            onClick={() => {
-              setType(value);
-              setSelected(undefined);
-            }}
+            disabled={!available.length || !report}
+            onClick={addBudget}
           >
-            {t(value === "EXPENSE" ? "budgets.expenses" : "budgets.income")}
-          </button>
-        ))}
+            <Plus size={17} aria-hidden="true" />
+            {t("budgets.add")}
+          </Button>
+        )}
       </div>
       <ErrorNotice error={query.error} />
       {query.isLoading && <Loading />}
@@ -153,26 +228,28 @@ export function BudgetsView({
               </div>
               <ul
                 className={styles.list}
-                aria-label={t("categories.allCategories")}
+                aria-label={t("budgets.selectedCategories")}
               >
                 {rows.map(({ category, depth, childCount }) => {
                   const row = byId.get(category.id);
-                  if (!row) return null;
+                  if (!row || row.amount === null) return null;
                   const name = categoryName(category, t);
-                  const configured = row.amount !== null;
-                  const over = configured && decimal(row.remaining!).lt(0);
-                  const reached = configured && decimal(row.remaining!).lte(0);
-                  const progress = !configured
-                    ? 0
-                    : decimal(row.amount!).isZero()
-                      ? decimal(row.actual).gt(0)
-                        ? 100
-                        : 0
-                      : decimal(row.actual)
-                          .div(row.amount!)
-                          .mul(100)
-                          .clamp(0, 100)
-                          .toNumber();
+                  const original = originals.get(category.id)!;
+                  const label =
+                    original.parentId === category.parentId
+                      ? name
+                      : categoryPath(original, categories, t);
+                  const over = decimal(row.remaining!).lt(0);
+                  const reached = decimal(row.remaining!).lte(0);
+                  const progress = decimal(row.amount).isZero()
+                    ? decimal(row.actual).gt(0)
+                      ? 100
+                      : 0
+                    : decimal(row.actual)
+                        .div(row.amount)
+                        .mul(100)
+                        .clamp(0, 100)
+                        .toNumber();
                   const expanded = !collapsed.has(category.id);
                   return (
                     <li
@@ -213,23 +290,17 @@ export function BudgetsView({
                           </IconButton>
                         )}
                         <div className={styles.name}>
-                          <strong>{name}</strong>
+                          <strong>{label}</strong>
                           <span className={styles.meta}>
                             {category.archivedAt ? (
                               t("budgets.archived")
                             ) : row.hasOverride ? (
-                              t(
-                                row.amount === null
-                                  ? "budgets.paused"
-                                  : "budgets.override",
-                              )
-                            ) : configured ? (
+                              t("budgets.override")
+                            ) : (
                               <>
                                 <Repeat2 size={12} aria-hidden="true" />
                                 {t("budgets.repeated")}
                               </>
-                            ) : (
-                              t("budgets.unset")
                             )}
                           </span>
                         </div>
@@ -244,11 +315,7 @@ export function BudgetsView({
                         <span className={styles.mobileLabel}>
                           {amountLabel}
                         </span>
-                        {configured ? (
-                          <Money value={row.amount} currency={currency} />
-                        ) : (
-                          <span className="muted">{t("budgets.unset")}</span>
-                        )}
+                        <Money value={row.amount} currency={currency} />
                       </div>
                       <div
                         className={`${styles.value} ${over && type === "EXPENSE" ? styles.over : ""}`}
@@ -256,247 +323,129 @@ export function BudgetsView({
                         <span className={styles.mobileLabel}>
                           {remainingLabel}
                         </span>
-                        {configured ? (
-                          <Money value={row.remaining} currency={currency} />
-                        ) : (
-                          <span aria-hidden="true">-</span>
+                        <Money value={row.remaining} currency={currency} />
+                      </div>
+                      <div className={styles.actions}>
+                        <IconButton
+                          label={t("budgets.editNamed", {
+                            name: categoryPath(original, categories, t),
+                          })}
+                          onClick={() => {
+                            setAdding(false);
+                            setSelected(category.id);
+                          }}
+                        >
+                          <Pencil size={17} />
+                        </IconButton>
+                        <IconButton
+                          label={t("budgets.removeNamed", {
+                            name: categoryPath(original, categories, t),
+                          })}
+                          onClick={() => setRemoving(original)}
+                        >
+                          <Trash2 size={17} />
+                        </IconButton>
+                      </div>
+                      <div className={styles.progressLine}>
+                        <div
+                          className={`${styles.track} ${over && type === "EXPENSE" ? styles.over : ""}`}
+                          role="progressbar"
+                          aria-label={t("budgets.progress", {
+                            name,
+                            actual: formatMoney(row.actual, currency, locale),
+                            amount: formatMoney(row.amount, currency, locale),
+                          })}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={progress}
+                        >
+                          <span style={{ width: `${progress}%` }} />
+                        </div>
+                        {((type === "EXPENSE" && over) ||
+                          (type === "INCOME" && reached)) && (
+                          <small
+                            className={
+                              type === "EXPENSE" ? styles.over : styles.achieved
+                            }
+                          >
+                            {t(
+                              type === "EXPENSE"
+                                ? "budgets.over"
+                                : "budgets.achieved",
+                            )}
+                          </small>
                         )}
                       </div>
-                      <IconButton
-                        className={styles.action}
-                        label={t("budgets.editNamed", { name })}
-                        disabled={
-                          !!category.archivedAt &&
-                          !configured &&
-                          !row.hasOverride
-                        }
-                        onClick={() => setSelected(category.id)}
-                      >
-                        {configured || row.hasOverride ? (
-                          <Pencil size={17} />
-                        ) : (
-                          <Plus size={17} />
-                        )}
-                      </IconButton>
-                      {configured && (
-                        <div className={styles.progressLine}>
-                          <div
-                            className={`${styles.track} ${over && type === "EXPENSE" ? styles.over : ""}`}
-                            role="progressbar"
-                            aria-label={t("budgets.progress", {
-                              name,
-                              actual: formatMoney(row.actual, currency, locale),
-                              amount: formatMoney(
-                                row.amount!,
-                                currency,
-                                locale,
-                              ),
-                            })}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={progress}
-                          >
-                            <span style={{ width: `${progress}%` }} />
-                          </div>
-                          {((type === "EXPENSE" && over) ||
-                            (type === "INCOME" && reached)) && (
-                            <small
-                              className={
-                                type === "EXPENSE"
-                                  ? styles.over
-                                  : styles.achieved
-                              }
-                            >
-                              {t(
-                                type === "EXPENSE"
-                                  ? "budgets.over"
-                                  : "budgets.achieved",
-                              )}
-                            </small>
-                          )}
-                        </div>
-                      )}
                     </li>
                   );
                 })}
               </ul>
             </section>
           ) : (
-            <Empty title={t("budgets.empty")}>
-              <Link className="button secondary" href="/categories">
-                <Plus size={17} />
-                {t("budgets.addCategory")}
-              </Link>
+            <Empty
+              title={t(
+                available.length ? "budgets.emptyMonth" : "budgets.empty",
+              )}
+            >
+              {available.length ? (
+                <Button type="button" onClick={addBudget}>
+                  <Plus size={17} aria-hidden="true" />
+                  {t("budgets.add")}
+                </Button>
+              ) : (
+                <Link className="button secondary" href="/categories">
+                  <Plus size={17} />
+                  {t("budgets.addCategory")}
+                </Link>
+              )}
             </Empty>
           )}
         </>
       )}
       <Modal
-        title={t("budgets.edit")}
+        title={t(adding ? "budgets.add" : "budgets.edit")}
         open={!!current}
-        onClose={() => setSelected(undefined)}
+        onClose={closeEditor}
         description={
           current
-            ? `${categoryPath(current, categories, t)} / ${new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-15T12:00:00Z`))}`
+            ? `${adding ? "" : `${categoryPath(current, categories, t)} / `}${new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-15T12:00:00Z`))}`
             : undefined
         }
       >
         {current && byId.get(current.id) && (
           <BudgetForm
             key={`${current.id}:${month}:${currency}`}
-            category={current}
+            target={{ categoryId: current.id }}
+            archived={!!current.archivedAt}
             row={byId.get(current.id)!}
             month={month}
             currency={currency}
-            onDone={() => setSelected(undefined)}
+            onDone={finishEditing}
+            targetOptions={adding ? available : undefined}
+            onTargetChange={setSelected}
+          />
+        )}
+      </Modal>
+      <Modal
+        title={t("budgets.remove")}
+        open={!!removing}
+        onClose={() => setRemoving(undefined)}
+        description={
+          removing
+            ? `${categoryPath(removing, categories, t)} / ${new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-15T12:00:00Z`))} / ${currency}`
+            : undefined
+        }
+      >
+        {removing && (
+          <BudgetRemoval
+            key={`${removing.id}:${month}:${currency}`}
+            target={{ categoryId: removing.id }}
+            month={month}
+            currency={currency}
+            onDone={() => setRemoving(undefined)}
           />
         )}
       </Modal>
     </>
-  );
-}
-
-function BudgetForm({
-  category,
-  row,
-  month,
-  currency,
-  onDone,
-}: {
-  category: Category;
-  row: BudgetRow;
-  month: string;
-  currency: string;
-  onDone: () => void;
-}) {
-  const t = useTranslations();
-  const client = useQueryClient();
-  const [scope, setScope] = useState<"MONTH" | "RECURRING">(
-    row.hasOverride ? "MONTH" : "RECURRING",
-  );
-  const [amount, setAmount] = useState(row.amount ?? "");
-  const [confirmRemove, setConfirmRemove] = useState(false);
-  const save = useMutation({
-    mutationFn: (action: "save" | "remove" | "reset") =>
-      api(
-        action === "reset" ? "budgets/override" : "budgets",
-        {
-          categoryId: category.id,
-          month,
-          currency,
-          ...(action === "reset"
-            ? {}
-            : { scope, amount: action === "remove" ? null : amount }),
-        },
-        action === "reset" ? "DELETE" : "POST",
-      ),
-    onSuccess: async () => {
-      await client.invalidateQueries({ queryKey: ["budgets"] });
-      await client.invalidateQueries({ queryKey: ["categories"] });
-      onDone();
-    },
-  });
-  return (
-    <form
-      className="entry-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        save.mutate("save");
-      }}
-    >
-      <Field label={t("budgets.scope")}>
-        {(id) => (
-          <Dropdown
-            id={id}
-            value={scope}
-            onValueChange={(v) => {
-              setScope(v as "MONTH" | "RECURRING");
-              setConfirmRemove(false);
-            }}
-          >
-            <option value="MONTH">{t("budgets.monthOnly")}</option>
-            <option value="RECURRING">{t("budgets.recurring")}</option>
-          </Dropdown>
-        )}
-      </Field>
-      <Field label={`${t("budgets.amount")} (${currency})`}>
-        {(id) => (
-          <input
-            id={id}
-            type="number"
-            inputMode="decimal"
-            required
-            min="0"
-            step="0.01"
-            max="999999999999999.99"
-            value={amount}
-            disabled={!!category.archivedAt || save.isPending || confirmRemove}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        )}
-      </Field>
-      <ErrorNotice error={save.error} />
-      {confirmRemove && (
-        <p role="status">
-          {t(
-            scope === "MONTH" ? "budgets.removeConfirm" : "budgets.stopConfirm",
-          )}
-        </p>
-      )}
-      {row.hasOverride && (
-        <Button
-          type="button"
-          className="secondary"
-          busy={save.isPending}
-          onClick={() => save.mutate("reset")}
-        >
-          <RotateCcw size={17} />
-          {t(
-            row.recurringAmount === null
-              ? "budgets.resetNone"
-              : "budgets.reset",
-          )}
-        </Button>
-      )}
-      <div className="form-footer">
-        {row.amount !== null && (
-          <Button
-            type="button"
-            className={confirmRemove ? "danger" : "secondary"}
-            busy={save.isPending}
-            onClick={() =>
-              confirmRemove ? save.mutate("remove") : setConfirmRemove(true)
-            }
-          >
-            <Trash2 size={17} />
-            {t(
-              confirmRemove
-                ? "common.confirm"
-                : scope === "MONTH"
-                  ? "budgets.remove"
-                  : "budgets.stop",
-            )}
-          </Button>
-        )}
-        {confirmRemove ? (
-          <Button
-            type="button"
-            className="secondary"
-            disabled={save.isPending}
-            onClick={() => setConfirmRemove(false)}
-          >
-            {t("common.cancel")}
-          </Button>
-        ) : (
-          <Button
-            type="submit"
-            busy={save.isPending}
-            disabled={!!category.archivedAt}
-          >
-            {t("common.save")}
-          </Button>
-        )}
-      </div>
-    </form>
   );
 }

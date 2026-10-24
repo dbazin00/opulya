@@ -19,6 +19,7 @@ export async function catalogueFixture(input: {
   assetType: "STOCK" | "ETF" | "CRYPTO" | "FUND";
   currency: string;
   exchange?: string;
+  mic?: string;
 }) {
   const database = testDatabaseUrl();
   if (new URL(database).pathname !== "/opulya_test")
@@ -33,7 +34,7 @@ export async function catalogueFixture(input: {
         ? `${input.symbol}/${input.currency}`
         : input.symbol,
     exchange: input.exchange ?? "Binance",
-    mic: input.assetType === "CRYPTO" ? "" : "XETR",
+    mic: input.mic ?? (input.assetType === "CRYPTO" ? "" : "XETR"),
     timeZone: input.assetType === "CRYPTO" ? "UTC" : "Europe/Berlin",
     isin: null,
   };

@@ -429,6 +429,13 @@ export class InstrumentsService {
         })
       )
         throw new ConflictException("ASSET_HAS_TRANSACTIONS");
+      if (
+        await tx.budget.findFirst({
+          where: { userId, assetId: id },
+          select: { id: true },
+        })
+      )
+        throw new ConflictException("ASSET_HAS_BUDGETS");
       await tx.asset.delete({ where: { id, userId } });
       return { ok: true };
     });

@@ -139,7 +139,8 @@ model Category {
 model Budget {
   id         String      @id @default(cuid())
   userId     String
-  categoryId String
+  categoryId String?
+  assetId    String?
   currency   String      @db.VarChar(3)
   month      String      @db.VarChar(7)
   scope      BudgetScope
@@ -147,9 +148,11 @@ model Budget {
   createdAt  DateTime    @default(now()) @db.Timestamptz(6)
   updatedAt  DateTime    @updatedAt @db.Timestamptz(6)
   user       User        @relation(fields: [userId], references: [id], onDelete: Restrict)
-  category   Category    @relation(fields: [categoryId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+  category   Category?   @relation(fields: [categoryId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+  asset      Asset?      @relation(fields: [assetId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([userId, categoryId, currency, month, scope])
+  @@unique([userId, assetId, currency, month, scope])
   @@index([userId, currency, month])
 }
 
@@ -204,6 +207,7 @@ model Asset {
   updatedAt            DateTime                @updatedAt @db.Timestamptz(6)
   user                 User                    @relation(fields: [userId], references: [id], onDelete: Restrict)
   transactions         InvestmentTransaction[]
+  budgets              Budget[]
   instrument           Instrument?             @relation(fields: [instrumentId], references: [id], onDelete: Restrict)
 
   @@unique([id, userId])

@@ -206,7 +206,9 @@ test("styled dropdowns preserve forms, required choices, nested focus and long l
     .click();
   await dialog.getByRole("button", { name: "Save", exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByText("VWCE", { exact: true })).toBeVisible();
+  await expect(
+    page.locator(".holding .listing-identity").getByText("VWCE", { exact: true }),
+  ).toBeVisible();
 
   await page.goto("/settings");
   const timezone = page.getByRole("combobox", {

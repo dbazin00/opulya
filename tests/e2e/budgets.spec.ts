@@ -40,6 +40,10 @@ for (const locale of ["en", "hr"] as const) {
       type: "EXPENSE",
       parentId: groceries.id,
     });
+    const unused = await post("categories", {
+      name: "Travel",
+      type: "EXPENSE",
+    });
     await post("transactions", {
       type: "EXPENSE",
       sourceAccountId: account.id,
@@ -66,7 +70,11 @@ for (const locale of ["en", "hr"] as const) {
     });
     await page.goto("/budgets");
     const row = (id: string) => page.locator(`[data-category-id="${id}"]`);
-    await expect(row(food.id)).toBeVisible();
+    await expect(row(groceries.id)).toBeVisible();
+    await expect(row(food.id)).toHaveCount(0);
+    await expect(row(produce.id)).toHaveCount(0);
+    await expect(row(unused.id)).toHaveCount(0);
+    await expect(row(groceries.id)).toContainText("Food / Groceries");
     // Month inputs have browser-dependent roles.
     const monthInput = page.locator('input[type="month"]');
     await monthInput.fill("2026-03");
@@ -76,14 +84,29 @@ for (const locale of ["en", "hr"] as const) {
         exact: true,
       }),
     ).toBeVisible();
-    await expect(row(food.id)).toContainText(hr ? "42,50" : "42.50");
+    await expect(row(groceries.id)).toContainText(hr ? "42,50" : "42.50");
     await page
       .getByRole("button", {
-        name: hr ? "Uredi budžet za Food" : "Edit budget for Food",
+        name: hr ? "Dodaj budžet" : "Add budget",
         exact: true,
       })
       .click();
     const dialog = page.getByRole("dialog");
+    const categoryPicker = dialog.getByRole("combobox", {
+      name: hr ? "Kategorija" : "Category",
+      exact: true,
+    });
+    await categoryPicker.click();
+    await expect(
+      page.getByRole("option", { name: "Food / Groceries", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("option", {
+        name: "Food / Groceries / Produce",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.getByRole("option", { name: "Food", exact: true }).click();
     await dialog
       .getByLabel(hr ? "Mjesečni iznos (EUR)" : "Monthly amount (EUR)")
       .fill("100");
@@ -118,7 +141,65 @@ for (const locale of ["en", "hr"] as const) {
         exact: true,
       })
       .click();
+    await expect(row(groceries.id)).toBeVisible();
+    await expect(row(produce.id)).toHaveCount(0);
+    await expect(row(unused.id)).toHaveCount(0);
+    await page.reload();
+    await monthInput.fill("2026-03");
+    await expect(row(food.id)).toBeVisible();
+    await expect(row(groceries.id)).toBeVisible();
+    await expect(row(produce.id)).toHaveCount(0);
+
+    await page
+      .getByRole("button", {
+        name: hr ? "Sažmi: Food" : "Collapse Food",
+        exact: true,
+      })
+      .click();
+    await page
+      .getByRole("button", {
+        name: hr ? "Dodaj budžet" : "Add budget",
+        exact: true,
+      })
+      .click();
+    await chooseOption(
+      dialog.getByRole("combobox", {
+        name: hr ? "Kategorija" : "Category",
+        exact: true,
+      }),
+      produce.id,
+    );
+    await dialog
+      .getByLabel(hr ? "Mjesečni iznos (EUR)" : "Monthly amount (EUR)")
+      .fill("0");
+    await dialog
+      .getByRole("button", { name: hr ? "Spremi" : "Save", exact: true })
+      .click();
+    await expect(dialog).not.toBeVisible();
     await expect(row(produce.id)).toBeVisible();
+    await expect(row(produce.id)).toContainText(hr ? "0,00" : "0.00");
+    await expect(page.locator(".stats-row .stat").first()).toContainText(
+      hr ? "100,00" : "100.00",
+    );
+    await row(produce.id)
+      .getByRole("button", {
+        name: `${hr ? "Uredi budžet za" : "Edit budget for"} Food / Groceries / Produce`,
+        exact: true,
+      })
+      .click();
+    await dialog
+      .getByRole("button", {
+        name: hr
+          ? "Zaustavi ponavljanje od ovog mjeseca"
+          : "Stop repeating from this month",
+        exact: true,
+      })
+      .click();
+    await dialog
+      .getByRole("button", { name: hr ? "Potvrdi" : "Confirm", exact: true })
+      .click();
+    await expect(dialog).not.toBeVisible();
+    await expect(row(produce.id)).toHaveCount(0);
 
     await monthInput.fill("2026-04");
     await expect(row(food.id)).toContainText(hr ? "100,00" : "100.00");
@@ -194,14 +275,67 @@ for (const locale of ["en", "hr"] as const) {
       .getByRole("button", { name: hr ? "Potvrdi" : "Confirm", exact: true })
       .click();
     await expect(dialog).not.toBeVisible();
-    await expect(row(food.id)).toContainText(
-      hr ? "Nije postavljeno" : "Not set",
-    );
+    await expect(row(food.id)).toHaveCount(0);
+    await expect(row(groceries.id)).toBeVisible();
+    await expect(row(groceries.id)).toContainText("Food / Groceries");
     await expect(page.locator(".stats-row .stat").first()).toContainText(
       hr ? "60,00" : "60.00",
     );
     await monthInput.fill("2026-04");
     await expect(row(food.id)).toContainText(hr ? "100,00" : "100.00");
+
+    // Pause the only remaining expense budget for one month, then restore it through Add budget.
+    await monthInput.fill("2026-06");
+    await row(groceries.id)
+      .getByRole("button", {
+        name: `${hr ? "Ukloni budžet za" : "Remove budget for"} Food / Groceries`,
+        exact: true,
+      })
+      .click();
+    await chooseOption(dialog.getByRole("combobox"), "MONTH");
+    await dialog
+      .getByRole("button", {
+        name: hr ? "Ukloni budžet" : "Remove budget",
+        exact: true,
+      })
+      .click();
+    await expect(dialog).not.toBeVisible();
+    await expect(row(groceries.id)).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", {
+        name: hr ? "Nema budžeta za ovaj mjesec" : "No budgets this month",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.reload();
+    await monthInput.fill("2026-06");
+    await expect(row(groceries.id)).toHaveCount(0);
+    await monthInput.fill("2026-07");
+    await expect(row(groceries.id)).toBeVisible();
+    await monthInput.fill("2026-06");
+    await expect(row(groceries.id)).toHaveCount(0);
+    await page
+      .getByRole("button", {
+        name: hr ? "Dodaj budžet" : "Add budget",
+        exact: true,
+      })
+      .click();
+    await chooseOption(
+      dialog.getByRole("combobox", {
+        name: hr ? "Kategorija" : "Category",
+        exact: true,
+      }),
+      groceries.id,
+    );
+    await dialog
+      .getByRole("button", {
+        name: hr ? "Koristi ponavljajući iznos" : "Use repeating amount",
+        exact: true,
+      })
+      .click();
+    await expect(dialog).not.toBeVisible();
+    await expect(row(groceries.id)).toContainText(hr ? "60,00" : "60.00");
+
     const incomeTab = page.getByRole("button", {
       name: hr ? "Ciljevi prihoda" : "Income targets",
       exact: true,
@@ -211,5 +345,46 @@ for (const locale of ["en", "hr"] as const) {
     await monthInput.fill("2026-06");
     await expect(incomeTab).toHaveAttribute("aria-pressed", "true");
     await expect(row(salary.id)).toContainText(hr ? "2.000,00" : "2,000.00");
+
+    // Permanent deletion is explicit, cancellable and removes all months for this category.
+    const removeSalary = () =>
+      row(salary.id)
+        .getByRole("button", {
+          name: `${hr ? "Ukloni budžet za" : "Remove budget for"} Salary`,
+          exact: true,
+        })
+        .click();
+    await removeSalary();
+    await chooseOption(dialog.getByRole("combobox"), "ALL");
+    await expect(dialog).toContainText(
+      hr ? "Ovu radnju nije moguće poništiti" : "This cannot be undone",
+    );
+    await page.screenshot({
+      path: `test-results/budget-removal-${locale}-${test.info().project.name}.png`,
+      fullPage: true,
+    });
+    await dialog
+      .getByRole("button", { name: hr ? "Odustani" : "Cancel", exact: true })
+      .click();
+    await expect(row(salary.id)).toBeVisible();
+    await removeSalary();
+    await chooseOption(dialog.getByRole("combobox"), "ALL");
+    await expect(page.locator("html")).toHaveJSProperty(
+      "scrollWidth",
+      await page.locator("html").evaluate((el) => el.clientWidth),
+    );
+    await dialog
+      .getByRole("button", {
+        name: hr ? "Trajno izbriši" : "Delete permanently",
+        exact: true,
+      })
+      .click();
+    await expect(dialog).not.toBeVisible();
+    await expect(row(salary.id)).toHaveCount(0);
+    await monthInput.fill("2026-03");
+    await expect(row(salary.id)).toHaveCount(0);
+    await page.reload();
+    await incomeTab.click();
+    await expect(row(salary.id)).toHaveCount(0);
   });
 }

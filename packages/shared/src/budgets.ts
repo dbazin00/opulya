@@ -19,7 +19,10 @@ export interface BudgetActivity {
   voidedAt?: string | null;
 }
 
-export function resolveBudget(rules: BudgetRule[], month: string) {
+export function resolveBudget(
+  rules: Pick<BudgetRule, "month" | "scope" | "amount">[],
+  month: string,
+) {
   const recurring = rules
     .filter((r) => r.scope === "RECURRING" && r.month <= month)
     .sort((a, b) => b.month.localeCompare(a.month))[0];
@@ -34,6 +37,64 @@ export function resolveBudget(rules: BudgetRule[], month: string) {
     startsAt: recurring?.month ?? null,
     recurringAmount: recurring?.amount ?? null,
     hasOverride: !!override,
+  };
+}
+
+// Activity is supplied for one user, month and currency; purchases include buying fees.
+export function monthlyInvestmentBudgets(
+  assets: { id: string }[],
+  rules: (Pick<BudgetRule, "month" | "scope" | "amount"> & {
+    assetId: string;
+  })[],
+  activity: {
+    assetId: string | null;
+    type: string;
+    totalAmount: string;
+    fee: string;
+    voidedAt?: string | null;
+  }[],
+  month: string,
+) {
+  const actual = new Map<string, string>();
+  for (const entry of activity) {
+    if (entry.type !== "BUY" || entry.voidedAt || !entry.assetId) continue;
+    actual.set(
+      entry.assetId,
+      decimal(actual.get(entry.assetId) ?? "0")
+        .add(entry.totalAmount)
+        .add(entry.fee)
+        .toFixed(),
+    );
+  }
+  const grouped = new Map<string, typeof rules>();
+  for (const rule of rules) {
+    const entries = grouped.get(rule.assetId) ?? [];
+    entries.push(rule);
+    grouped.set(rule.assetId, entries);
+  }
+  const rows = assets.map((asset) => {
+    const budget = resolveBudget(grouped.get(asset.id) ?? [], month);
+    const invested = actual.get(asset.id) ?? "0";
+    return {
+      assetId: asset.id,
+      ...budget,
+      actual: invested,
+      remaining:
+        budget.amount === null
+          ? null
+          : decimal(budget.amount).sub(invested).toFixed(),
+    };
+  });
+  const selected = rows.filter((row) => row.amount !== null);
+  const planned = sum(selected.map((row) => row.amount!));
+  const tracked = sum(selected.map((row) => row.actual));
+  return {
+    rows,
+    planned,
+    actual: tracked,
+    remaining: decimal(planned).sub(tracked).toFixed(),
+    totalActual: sum([...actual.values()]),
+    count: selected.length,
   };
 }
 

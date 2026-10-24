@@ -1747,6 +1747,7 @@ strong {
 }
 .select-control {
   display: inline-grid;
+  grid-template-columns: minmax(0, 1fr);
   position: relative;
   min-width: 0;
   width: 100%;
@@ -1754,6 +1755,7 @@ strong {
 }
 .styled-select {
   width: 100%;
+  min-width: 0;
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -1779,6 +1781,7 @@ strong {
   border-color: var(--red);
 }
 .styled-select > span:first-child {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1822,8 +1825,9 @@ strong {
   color: var(--green);
 }
 .select-content {
-  min-width: max(180px, var(--radix-select-trigger-width));
-  max-width: min(560px, calc(100vw - 24px));
+  width: var(--radix-select-trigger-width);
+  min-width: 0;
+  max-width: calc(100vw - 24px);
   max-height: min(360px, var(--radix-select-content-available-height));
   overflow: hidden;
   padding: 4px;
@@ -1833,6 +1837,9 @@ strong {
   border-radius: 6px;
   box-shadow: 0 8px 24px #172b391a;
   z-index: 100;
+}
+.select-content:has(.language-option) {
+  width: max(180px, var(--radix-select-trigger-width));
 }
 .select-viewport {
   max-height: min(
