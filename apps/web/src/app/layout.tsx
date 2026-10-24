@@ -11,12 +11,16 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const preference = (await cookies()).get("OPULYA_LOCALE")?.value;
+  const store = await cookies();
+  const preference = store.get("OPULYA_LOCALE")?.value;
   const locale = resolveLocale(preference);
+  const theme = store.get("OPULYA_THEME")?.value === "dark" ? "dark" : "light";
   return (
-    <html lang={locale} data-scroll-behavior="smooth">
+    <html lang={locale} data-theme={theme} data-scroll-behavior="smooth">
       <body>
-        <Providers locale={locale}>{children}</Providers>
+        <Providers locale={locale} theme={theme}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

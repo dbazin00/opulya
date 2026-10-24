@@ -8,6 +8,7 @@ import type { LegalDetails } from "@/lib/legal-config";
 import { BrandLink } from "./brand-link";
 import { LanguageSelect } from "./language-select";
 import { LegalLinks } from "./legal-links";
+import { ThemeToggle } from "./theme-toggle";
 
 const sections = {
   privacy: [
@@ -43,14 +44,17 @@ export function LegalPage({
       </a>
       <header className="auth-top">
         <BrandLink href="/" />
-        <LanguageSelect
-          label={common("common.language")}
-          value={locale}
-          onValueChange={(next) => {
-            document.cookie = `OPULYA_LOCALE=${next}; Path=/; SameSite=Lax; Max-Age=31536000`;
-            window.location.reload();
-          }}
-        />
+        <div className="auth-actions">
+          <ThemeToggle />
+          <LanguageSelect
+            label={common("common.language")}
+            value={locale}
+            onValueChange={(next) => {
+              document.cookie = `OPULYA_LOCALE=${next}; Path=/; SameSite=Lax; Max-Age=31536000`;
+              window.location.reload();
+            }}
+          />
+        </div>
       </header>
       <main id="legal-content" className="legal-content">
         <Link href="/signup" className="legal-back">

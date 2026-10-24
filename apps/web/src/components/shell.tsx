@@ -22,6 +22,7 @@ import { useUser } from "./providers";
 import { ErrorNotice, IconButton, Modal } from "./ui";
 import { TransactionForm } from "./forms";
 import { BrandLink } from "./brand-link";
+import { ThemeToggle } from "./theme-toggle";
 const links = [
   ["dashboard", LayoutDashboard],
   ["accounts", Wallet],
@@ -99,6 +100,7 @@ export function Shell({ children }: { children: ReactNode }) {
               : t("brand")}
           </div>
           <div className="topbar-actions">
+            <ThemeToggle />
             <span className="user-greeting">
               {t("dashboard.greeting", { name: user.firstName })}
             </span>

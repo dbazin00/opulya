@@ -1,4 +1,5 @@
 "use client";
+import { ThemeToggle } from "./theme-toggle";
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
@@ -265,6 +266,7 @@ export function LandingPage() {
           ))}
         </nav>
         <div className={styles.headerActions}>
+          <ThemeToggle />
           <LanguageSelect
             value={locale}
             label={t("common.language")}

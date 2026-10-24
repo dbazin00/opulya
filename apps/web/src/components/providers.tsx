@@ -11,13 +11,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { resolveLocale, type Locale } from "@opulya/shared";
 import { messages } from "@/i18n/messages";
 import type { User } from "@/lib/types";
+import { ThemeProvider, type Theme } from "./theme-provider";
 const UserContext = createContext<User | null>(null);
 export const useUser = () => useContext(UserContext)!;
 export function Providers({
   locale,
+  theme,
   children,
 }: {
   locale: Locale;
+  theme: Theme;
   children: ReactNode;
 }) {
   const [client] = useState(
@@ -30,15 +33,17 @@ export function Providers({
       }),
   );
   return (
-    <QueryClientProvider client={client}>
-      <NextIntlClientProvider
-        locale={locale}
-        messages={messages[locale]}
-        timeZone="Europe/Zagreb"
-      >
-        {children}
-      </NextIntlClientProvider>
-    </QueryClientProvider>
+    <ThemeProvider initialTheme={theme}>
+      <QueryClientProvider client={client}>
+        <NextIntlClientProvider
+          locale={locale}
+          messages={messages[locale]}
+          timeZone="Europe/Zagreb"
+        >
+          {children}
+        </NextIntlClientProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 export function UserProvider({

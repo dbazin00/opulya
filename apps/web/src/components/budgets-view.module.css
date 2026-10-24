@@ -109,21 +109,21 @@
   height: 5px;
   overflow: hidden;
   border-radius: 3px;
-  background: #e3eae7;
+  background: light-dark(#e3eae7, #383838);
 }
 .track > span {
   display: block;
   height: 100%;
-  background: #08745a;
+  background: light-dark(#08745a, #7bd6a8);
 }
 .track.over > span {
-  background: #b83540;
+  background: light-dark(#b83540, #ff9ba6);
 }
 .over {
-  color: #b12d37;
+  color: light-dark(#b12d37, #ff9ba6);
 }
 .achieved {
-  color: #08745a;
+  color: light-dark(#08745a, #7bd6a8);
 }
 @media (max-width: 1100px) {
   .head,

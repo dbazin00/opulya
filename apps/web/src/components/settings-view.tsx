@@ -8,9 +8,12 @@ import { Button, ErrorNotice, Field } from "./ui";
 import { useUser } from "./providers";
 import { LanguageSelect } from "./language-select";
 import { LegalLinks } from "./legal-links";
+import { Moon, Sun } from "lucide-react";
+import { useTheme } from "./theme-provider";
 export function SettingsView() {
   const t = useTranslations();
   const user = useUser();
+  const { theme, setTheme } = useTheme();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
@@ -48,6 +51,33 @@ export function SettingsView() {
       <section className="section">
         <h2>{t("settings.preferences")}</h2>
         <form className="entry-form" onSubmit={submit}>
+          <div className="field">
+            <span className="field-label" id="appearance-label">
+              {t("settings.appearance")}
+            </span>
+            <div
+              className="segmented theme-options"
+              role="group"
+              aria-labelledby="appearance-label"
+            >
+              {(["light", "dark"] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={theme === value ? "selected" : ""}
+                  aria-pressed={theme === value}
+                  onClick={() => setTheme(value)}
+                >
+                  {value === "light" ? (
+                    <Sun size={17} aria-hidden />
+                  ) : (
+                    <Moon size={17} aria-hidden />
+                  )}
+                  {t(`settings.${value}`)}
+                </button>
+              ))}
+            </div>
+          </div>
           <Field label={t("settings.locale")}>
             {(id) => (
               <LanguageSelect

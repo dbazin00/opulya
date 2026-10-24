@@ -23,14 +23,22 @@ import type { Analytics } from "@/lib/types";
 import { Empty, Money } from "./ui";
 import styles from "./charts.module.css";
 const colors = [
-  "#075c49",
-  "#ad8743",
-  "#547ba5",
-  "#9b626c",
-  "#68836c",
-  "#7c7392",
-  "#b66b4b",
+  "var(--green)",
+  "light-dark(#ad8743, #dec17e)",
+  "light-dark(#547ba5, #9ec5ed)",
+  "light-dark(#9b626c, #e4a1b1)",
+  "light-dark(#68836c, #abc998)",
+  "light-dark(#7c7392, #bfb0e0)",
+  "light-dark(#b66b4b, #efa98a)",
 ];
+const tooltipStyle = {
+  backgroundColor: "var(--surface)",
+  border: "1px solid var(--line)",
+  color: "var(--text)",
+  borderRadius: 6,
+};
+const tooltipItemStyle = { color: "var(--text)" };
+const tooltipCursor = { fill: "light-dark(#edf1ef, #303030)" };
 export function FlowChart({
   data,
   currency,
@@ -65,7 +73,7 @@ export function FlowChart({
               data={chartData}
               margin={{ top: 12, right: 8, bottom: 0, left: 0 }}
             >
-              <CartesianGrid vertical={false} stroke="#e7ebe9" />
+              <CartesianGrid vertical={false} stroke="var(--line)" />
               <XAxis
                 dataKey="label"
                 axisLine={false}
@@ -84,14 +92,17 @@ export function FlowChart({
                 }
               />
               <Tooltip
+                contentStyle={tooltipStyle}
+                itemStyle={tooltipItemStyle}
+                cursor={tooltipCursor}
                 formatter={(v) => formatMoney(String(v), currency, locale)}
               />
               <Area
                 type="monotone"
                 dataKey="balance"
                 name={t("common.balance")}
-                stroke="#075c49"
-                fill="#dbeae4"
+                stroke="var(--green)"
+                fill="light-dark(#dbeae4, #234333)"
                 strokeWidth={2}
                 isAnimationActive={false}
               />
@@ -101,7 +112,7 @@ export function FlowChart({
               data={chartData}
               margin={{ top: 12, right: 8, bottom: 0, left: 0 }}
             >
-              <CartesianGrid vertical={false} stroke="#e7ebe9" />
+              <CartesianGrid vertical={false} stroke="var(--line)" />
               <XAxis
                 dataKey="label"
                 axisLine={false}
@@ -120,19 +131,22 @@ export function FlowChart({
                 }
               />
               <Tooltip
+                contentStyle={tooltipStyle}
+                itemStyle={tooltipItemStyle}
+                cursor={tooltipCursor}
                 formatter={(v) => formatMoney(String(v), currency, locale)}
               />
               <Bar
                 dataKey="income"
                 name={t("analytics.income")}
-                fill="#075c49"
+                fill="var(--green)"
                 radius={[3, 3, 0, 0]}
                 isAnimationActive={false}
               />
               <Bar
                 dataKey="expenses"
                 name={t("analytics.expenses")}
-                fill="#c5a565"
+                fill="light-dark(#c5a565, #dec17e)"
                 radius={[3, 3, 0, 0]}
                 isAnimationActive={false}
               />
@@ -239,7 +253,7 @@ export function DistributionChart({
                     className={styles.slice}
                     data-active={selected}
                     fill={color}
-                    stroke={selected ? color : "#fff"}
+                    stroke={selected ? color : "var(--surface)"}
                     strokeWidth={selected ? 4 : 1}
                     opacity={highlightedId && !selected ? 0.4 : 1}
                   />
@@ -342,8 +356,8 @@ function DistributionTooltip({
             ? [{ graphicalItemId: row.id, name: row.label, value: row.amount }]
             : payload
         }
-        contentStyle={{ whiteSpace: "normal" }}
-        itemStyle={{ color: "var(--text)" }}
+        contentStyle={{ ...tooltipStyle, whiteSpace: "normal" }}
+        itemStyle={tooltipItemStyle}
         formatter={(value) => formatMoney(String(value), currency, locale)}
       />
     </div>
@@ -372,7 +386,7 @@ export function DailyChart({
               expenses: Number(d.expenses),
             }))}
           >
-            <CartesianGrid vertical={false} stroke="#e7ebe9" />
+            <CartesianGrid vertical={false} stroke="var(--line)" />
             <XAxis
               dataKey="day"
               fontSize={11}
@@ -382,12 +396,15 @@ export function DailyChart({
             />
             <YAxis width={45} fontSize={11} axisLine={false} tickLine={false} />
             <Tooltip
+              contentStyle={tooltipStyle}
+              itemStyle={tooltipItemStyle}
+              cursor={tooltipCursor}
               formatter={(v) => formatMoney(String(v), currency, locale)}
             />
             <Bar
               dataKey="expenses"
               name={t("analytics.expenses")}
-              fill="#ad8743"
+              fill="light-dark(#ad8743, #dec17e)"
               radius={[2, 2, 0, 0]}
               isAnimationActive={false}
             />

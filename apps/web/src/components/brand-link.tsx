@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { BrandMark } from "./brand-mark";
 
 export function BrandLink({
   href,
@@ -18,7 +18,7 @@ export function BrandLink({
       className={`brand-link ${className}`}
       aria-label={t("brand")}
     >
-      <Image src="/opulya-mark.png" alt="" width={48} height={48} preload />
+      <BrandMark size={48} preload />
       <span>{t("brand")}</span>
     </Link>
   );

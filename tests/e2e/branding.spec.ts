@@ -52,6 +52,51 @@ test("logo and wordmark branding and browser icons render", async ({
     path: `test-results/branding-${testInfo.project.name}.png`,
     fullPage: true,
   });
+  await page.getByRole("button", { name: "Switch to dark theme" }).click();
+  await expect(logo).toHaveAttribute("src", /opulya-mark-dark\.png/);
+  await expect
+    .poll(() =>
+      logo.evaluate(
+        (image: HTMLImageElement) => image.complete && image.naturalWidth > 0,
+      ),
+    )
+    .toBe(true);
+  const greenContrast = await logo.evaluate((image: HTMLImageElement) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext("2d")!;
+    context.drawImage(image, 0, 0);
+    const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+    let luminance = 0;
+    let count = 0;
+    const linear = (channel: number) => {
+      const value = channel / 255;
+      return value <= 0.04045
+        ? value / 12.92
+        : ((value + 0.055) / 1.055) ** 2.4;
+    };
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i]!;
+      const g = data[i + 1]!;
+      const b = data[i + 2]!;
+      if (data[i + 3]! < 200 || g <= r * 1.1 || g <= b * 1.05) continue;
+      luminance += 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+      count++;
+    }
+    return {
+      count,
+      contrast: (luminance / count + 0.05) / (linear(30) + 0.05),
+    };
+  });
+  expect(greenContrast.count).toBeGreaterThan(100);
+  expect(greenContrast.contrast).toBeGreaterThan(3);
+  await page.screenshot({
+    path: `test-results/branding-dark-${testInfo.project.name}.png`,
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Switch to light theme" }).click();
+  await expect(logo).toHaveAttribute("src", /opulya-mark\.png/);
 });
 
 for (const locale of ["en", "hr"] as const) {
