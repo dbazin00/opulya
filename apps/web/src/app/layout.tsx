@@ -1,5 +1,5 @@
-import { cookies, headers } from "next/headers";
-import { preferredLocale, resolveLocale } from "@opulya/shared";
+import { cookies } from "next/headers";
+import { resolveLocale } from "@opulya/shared";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 export const metadata = {
@@ -12,9 +12,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const preference = (await cookies()).get("OPULYA_LOCALE")?.value;
-  const locale = preference
-    ? resolveLocale(preference)
-    : preferredLocale((await headers()).get("accept-language"));
+  const locale = resolveLocale(preference);
   return (
     <html lang={locale} data-scroll-behavior="smooth">
       <body>
