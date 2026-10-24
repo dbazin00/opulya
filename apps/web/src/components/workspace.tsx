@@ -41,6 +41,7 @@ import {
   Button,
   Empty,
   ErrorNotice,
+  Field,
   IconButton,
   Loading,
   Modal,
@@ -64,6 +65,7 @@ import { SettingsView } from "./settings-view";
 import { CategoriesView } from "./categories-view";
 import { AssetsView } from "./assets-view";
 import { BudgetsView } from "./budgets-view";
+import transactionStyles from "./transaction-layout.module.css";
 
 export function useMonth() {
   const user = useUser();
@@ -108,7 +110,9 @@ export function Workspace({
           <h1>{t(`${view === "dashboard" ? "dashboard" : view}.title`)}</h1>
           <p className="subtitle">{t(`${view}.subtitle`)}</p>
         </div>
-        <div className="page-actions">
+        <div
+          className={`page-actions${view === "transactions" ? ` ${transactionStyles.actions}` : ""}`}
+        >
           {showMonth && <MonthPicker value={month} onChange={setMonth} />}
           {["dashboard", "analytics", "transactions", "budgets"].includes(
             view,
@@ -778,74 +782,87 @@ function TransactionsView({
   });
   return (
     <>
-      <div className="filters">
-        <Dropdown
-          value={accountId}
-          onValueChange={(value) => setAccount(value)}
-          aria-label={t("common.account")}
-        >
-          <option value="">
-            {t("common.all")} · {t("nav.accounts")}
-          </option>
-          {accounts
-            .filter((a) => a.currency === currency)
-            .map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-        </Dropdown>
-        <Dropdown
-          value={type}
-          onValueChange={(value) => {
-            setType(value);
-            setCategory("");
-          }}
-          aria-label={t("common.type")}
-        >
-          <option value="">
-            {t("common.all")} · {t("common.type")}
-          </option>
-          {ledgerTypes.map((v) => (
-            <option key={v} value={v}>
-              {t(`types.${v}`)}
-            </option>
-          ))}
-        </Dropdown>
-        <Dropdown
-          value={categoryId}
-          onValueChange={(value) => setCategory(value)}
-          aria-label={t("common.category")}
-          disabled={type === "TRANSFER" || type === "ADJUSTMENT"}
-        >
-          <option value="">
-            {t("common.all")} · {t("nav.categories")}
-          </option>
-          {categories
-            .filter((c) => !type || c.type === type)
-            .map((c) => (
-              <option key={c.id} value={c.id}>
-                {categoryPath(c, categories, t)}
-              </option>
-            ))}
-        </Dropdown>
-        <label>
-          {t("common.startDate")}
-          <input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
-        </label>
-        <label>
-          {t("common.endDate")}
-          <input
-            type="date"
-            value={to}
-            min={from}
-            onChange={(e) => setTo(e.target.value)}
-          />
-        </label>
+      <div className={transactionStyles.filters}>
+        <Field label={t("common.account")}>
+          {(id) => (
+            <Dropdown
+              id={id}
+              value={accountId}
+              onValueChange={(value) => setAccount(value)}
+              aria-label={t("common.account")}
+            >
+              <option value="">{t("common.all")}</option>
+              {accounts
+                .filter((a) => a.currency === currency)
+                .map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+            </Dropdown>
+          )}
+        </Field>
+        <Field label={t("common.type")}>
+          {(id) => (
+            <Dropdown
+              id={id}
+              value={type}
+              onValueChange={(value) => {
+                setType(value);
+                setCategory("");
+              }}
+              aria-label={t("common.type")}
+            >
+              <option value="">{t("common.all")}</option>
+              {ledgerTypes.map((v) => (
+                <option key={v} value={v}>
+                  {t(`types.${v}`)}
+                </option>
+              ))}
+            </Dropdown>
+          )}
+        </Field>
+        <Field label={t("common.category")}>
+          {(id) => (
+            <Dropdown
+              id={id}
+              value={categoryId}
+              onValueChange={(value) => setCategory(value)}
+              aria-label={t("common.category")}
+              disabled={type === "TRANSFER" || type === "ADJUSTMENT"}
+            >
+              <option value="">{t("common.all")}</option>
+              {categories
+                .filter((c) => !type || c.type === type)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {categoryPath(c, categories, t)}
+                  </option>
+                ))}
+            </Dropdown>
+          )}
+        </Field>
+        <Field label={t("common.startDate")}>
+          {(id) => (
+            <input
+              id={id}
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label={t("common.endDate")}>
+          {(id) => (
+            <input
+              id={id}
+              type="date"
+              value={to}
+              min={from}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          )}
+        </Field>
       </div>
       <ErrorNotice error={transactions.error} />
       {transactions.isLoading ? (

@@ -1,4 +1,5 @@
 "use client";
+import { useId, useRef, useState, type RefObject } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Area,
@@ -6,17 +7,21 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
+  DefaultTooltipContent,
   Pie,
   PieChart,
   ResponsiveContainer,
+  Sector,
   Tooltip,
+  type PieSectorShapeProps,
+  type TooltipPayload,
   XAxis,
   YAxis,
 } from "recharts";
 import { formatMoney, resolveLocale } from "@opulya/shared";
 import type { Analytics } from "@/lib/types";
 import { Empty, Money } from "./ui";
+import styles from "./charts.module.css";
 const colors = [
   "#075c49",
   "#ad8743",
@@ -168,13 +173,54 @@ export function DistributionChart({
   onSelect?: (id: string) => void;
 }) {
   const t = useTranslations();
+  const tooltipId = useId();
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [legendId, setLegendId] = useState<string | null>(null);
+  const [sliceId, setSliceId] = useState<string | null>(null);
+  const [pointer, setPointer] = useState<{ x: number; y: number }>();
   const active = rows.filter((r) => Number(r.amount) > 0);
+  const legendIndex = active.findIndex((row) => row.id === legendId);
+  const legendRow = active[legendIndex];
+  const highlightedId = legendRow?.id ?? sliceId;
+  const highlightSlice = (_: unknown, index: number) => {
+    setLegendId(null);
+    setSliceId(active[index]?.id ?? null);
+  };
   if (!active.length) return <Empty title={t("analytics.noActivity")} />;
   return (
     <div className="distribution">
-      <div className="donut" aria-hidden inert>
+      <div
+        className="donut"
+        onMouseMove={(event) => {
+          const chart = event.currentTarget.getBoundingClientRect();
+          const tooltip = tooltipRef.current?.getBoundingClientRect();
+          setPointer({
+            x: Math.max(
+              0,
+              Math.min(
+                event.clientX - chart.left + 10,
+                window.innerWidth -
+                  chart.left -
+                  (tooltip?.width ?? chart.width) -
+                  16,
+              ),
+            ),
+            y: Math.max(
+              0,
+              Math.min(
+                event.clientY - chart.top + 10,
+                window.innerHeight - chart.top - (tooltip?.height ?? 80) - 16,
+              ),
+            ),
+          });
+        }}
+        onMouseLeave={() => {
+          setPointer(undefined);
+          setSliceId(null);
+        }}
+      >
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
+          <PieChart accessibilityLayer={false}>
             <Pie
               data={active.map((r) => ({ ...r, value: Number(r.amount) }))}
               dataKey="value"
@@ -183,19 +229,68 @@ export function DistributionChart({
               outerRadius="90%"
               paddingAngle={2}
               isAnimationActive={false}
-            >
-              {active.map((r, i) => (
-                <Cell key={r.id} fill={colors[i % colors.length]} />
-              ))}
-            </Pie>
+              shape={(props: PieSectorShapeProps) => {
+                const row = active[props.index];
+                const selected = row?.id === highlightedId;
+                const color = colors[props.index % colors.length];
+                return (
+                  <Sector
+                    {...props}
+                    className={styles.slice}
+                    data-active={selected}
+                    fill={color}
+                    stroke={selected ? color : "#fff"}
+                    strokeWidth={selected ? 4 : 1}
+                    opacity={highlightedId && !selected ? 0.4 : 1}
+                  />
+                );
+              }}
+              onMouseEnter={highlightSlice}
+              onMouseMove={highlightSlice}
+              onMouseLeave={(_, index) =>
+                setSliceId((current) =>
+                  current === active[index]?.id ? null : current,
+                )
+              }
+            />
+            <Tooltip
+              active={legendRow ? true : undefined}
+              defaultIndex={legendIndex >= 0 ? legendIndex : undefined}
+              position={legendRow ? undefined : pointer}
+              animationDuration={180}
+              animationEasing="ease-out"
+              content={
+                <DistributionTooltip
+                  tooltipRef={tooltipRef}
+                  id={tooltipId}
+                  row={legendRow}
+                  currency={currency}
+                />
+              }
+            />
           </PieChart>
         </ResponsiveContainer>
       </div>
       <ul className="legend">
         {active.map((r, i) => (
-          <li key={r.id}>
+          <li
+            key={r.id}
+            onMouseEnter={() => setLegendId(r.id)}
+            onMouseLeave={() => setLegendId(null)}
+            onFocus={() => setLegendId(r.id)}
+            onBlur={() => setLegendId(null)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setLegendId(null);
+            }}
+          >
             {onSelect && r.id !== "direct" ? (
-              <button onClick={() => onSelect(r.id)}>
+              <button
+                aria-describedby={legendId === r.id ? tooltipId : undefined}
+                onClick={() => {
+                  setLegendId(null);
+                  onSelect(r.id);
+                }}
+              >
                 <i
                   style={{ background: colors[i % colors.length] }}
                   aria-hidden
@@ -204,7 +299,10 @@ export function DistributionChart({
                 <Money value={r.amount} currency={currency} />
               </button>
             ) : (
-              <div>
+              <div
+                tabIndex={0}
+                aria-describedby={legendId === r.id ? tooltipId : undefined}
+              >
                 <i
                   style={{ background: colors[i % colors.length] }}
                   aria-hidden
@@ -216,6 +314,38 @@ export function DistributionChart({
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+function DistributionTooltip({
+  active,
+  payload = [],
+  row,
+  currency,
+  id,
+  tooltipRef,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload;
+  row?: { id: string; label: string; amount: string };
+  currency: string;
+  id: string;
+  tooltipRef: RefObject<HTMLDivElement | null>;
+}) {
+  const locale = resolveLocale(useLocale());
+  if (!active) return null;
+  return (
+    <div ref={tooltipRef} id={id} role="tooltip" className={styles.tooltip}>
+      <DefaultTooltipContent
+        payload={
+          row
+            ? [{ graphicalItemId: row.id, name: row.label, value: row.amount }]
+            : payload
+        }
+        contentStyle={{ whiteSpace: "normal" }}
+        itemStyle={{ color: "var(--text)" }}
+        formatter={(value) => formatMoney(String(value), currency, locale)}
+      />
     </div>
   );
 }

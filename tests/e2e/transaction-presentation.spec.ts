@@ -243,8 +243,73 @@ test("category paths lead transactions, descriptions stay separate and balances 
       ).violations,
     ).toEqual([]);
   };
+  const assertFilters = async (locale: "en" | "hr") => {
+    const labels =
+      locale === "en"
+        ? ["Account", "Type", "Category", "Start date", "End date"]
+        : ["Račun", "Vrsta", "Kategorija", "Početni datum", "Završni datum"];
+    const controls = labels.map((name) =>
+      page.getByLabel(name, { exact: true }),
+    );
+    const originalViewport = page.viewportSize()!;
+    const widths =
+      testInfo.project.name === "mobile" ? [320, 360, 430, 768] : [1024, 1440];
+    for (const width of widths) {
+      await page.setViewportSize({ width, height: originalViewport.height });
+      const boxes = await Promise.all(
+        controls.map((control) => control.boundingBox()),
+      );
+      for (const box of boxes) {
+        expect(box).not.toBeNull();
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+        expect(box!.height).toBe(44);
+      }
+      const [account, type, category, start, end] = boxes;
+      expect(start!.y).toBe(end!.y);
+      expect(start!.width).toBeCloseTo(end!.width, 0);
+      if (width <= 800) {
+        expect(account!.y).toBe(type!.y);
+        expect(category!.y).toBeGreaterThan(account!.y);
+        expect(category!.x).toBe(start!.x);
+        expect(category!.width).toBeCloseTo(end!.x + end!.width - start!.x, 0);
+        expect(start!.y).toBeGreaterThan(category!.y);
+        const actions = page.locator(".workspace .page-actions");
+        const month = await actions.locator(".month-picker").boundingBox();
+        const currency = await actions.getByRole("combobox").boundingBox();
+        const add = await actions
+          .getByRole("button", {
+            name: locale === "en" ? "Add transaction" : "Dodaj transakciju",
+            exact: true,
+          })
+          .boundingBox();
+        expect(month!.y).toBe(currency!.y);
+        expect(month!.x + month!.width).toBeLessThan(currency!.x);
+        expect(add!.x).toBe(month!.x);
+        expect(add!.width).toBeCloseTo(
+          currency!.x + currency!.width - month!.x,
+          0,
+        );
+      }
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+      await page.screenshot({
+        path: `test-results/transaction-filters-${locale}-${width}.png`,
+        fullPage: true,
+      });
+    }
+    await page.setViewportSize(originalViewport);
+    await chooseOption(controls[0]!, bank.id);
+    await expect(controls[0]!).toHaveAttribute("title", bank.name);
+    await expect(page.locator(".transaction-row")).toHaveCount(5);
+    await chooseOption(controls[0]!, "");
+  };
   await page.goto("/transactions");
   await assertList(page);
+  await assertFilters("en");
   await expect(
     page
       .locator(".transaction-description > strong")
@@ -277,7 +342,7 @@ test("category paths lead transactions, descriptions stay separate and balances 
     page.locator(".transaction-row").filter({ hasText: note }).locator("time"),
   ).not.toContainText(/\d{1,2}:\d{2}:\d{2}/);
 
-  await page.goto("/");
+  await page.goto("/dashboard");
   await assertList(page);
   await page.goto(`/accounts/${bank.id}`);
   const history = page.locator(".history-row").filter({ hasText: note });
@@ -322,6 +387,7 @@ test("category paths lead transactions, descriptions stay separate and balances 
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.goto("/transactions");
   await assertList(page, "Stanje nakon transakcije");
+  await assertFilters("hr");
   await expect(
     page
       .locator(".transaction-description > strong")
