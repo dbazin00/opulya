@@ -1,5 +1,5 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -38,9 +38,42 @@ export function Shell({ children }: { children: ReactNode }) {
   const t = useTranslations();
   const path = usePathname();
   const user = useUser();
+  const shell = useRef<HTMLDivElement>(null);
+  const header = useRef<HTMLElement>(null);
+  const mobileNavigation = useRef<HTMLElement>(null);
   const [more, setMore] = useState(false);
   const [add, setAdd] = useState(false);
   const [error, setError] = useState<unknown>();
+  useLayoutEffect(() => {
+    const root = shell.current;
+    const topbar = header.current;
+    const navigation = mobileNavigation.current;
+    if (!root || !topbar || !navigation) return;
+    const measure = () => {
+      const bounds = topbar.getBoundingClientRect();
+      const menu = navigation.getBoundingClientRect();
+      root.style.setProperty(
+        "--loading-top",
+        `${Math.max(0, bounds.bottom)}px`,
+      );
+      root.style.setProperty("--loading-left", `${Math.max(0, bounds.left)}px`);
+      root.style.setProperty(
+        "--loading-bottom",
+        `${menu.height ? Math.max(0, window.innerHeight - menu.top) : 0}px`,
+      );
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(topbar);
+    observer.observe(navigation);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, { passive: true });
+    measure();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure);
+    };
+  }, []);
   const nav = (mobile = false) =>
     links
       .filter((_, i) => !mobile || i < 4)
@@ -57,7 +90,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </Link>
       ));
   return (
-    <div className="app-shell">
+    <div className="app-shell" ref={shell}>
       <a className="skip-link" href="#main-content">
         {t("common.skip")}
       </a>
@@ -92,7 +125,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <ErrorNotice error={error} />
       </aside>
       <div className="main-column">
-        <header className="topbar">
+        <header className="topbar" ref={header}>
           <BrandLink className="mobile-brand" href="/dashboard" />
           <div className="desktop-breadcrumb">
             {t.has(`nav.${path.split("/")[1]}`)
@@ -119,7 +152,11 @@ export function Shell({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
-      <nav className="mobile-nav" aria-label={t("common.navigation")}>
+      <nav
+        className="mobile-nav"
+        ref={mobileNavigation}
+        aria-label={t("common.navigation")}
+      >
         {nav(true)}
         <button
           onClick={() => setMore(true)}

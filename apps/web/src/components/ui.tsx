@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { formatMoney, resolveLocale } from "@opulya/shared";
 import { ApiError } from "@/lib/api";
+import { OpulyaSpinner } from "./opulya-spinner";
 export function Spinner({
   label,
   size = 18,
@@ -215,12 +216,12 @@ export function Empty({
 export function Loading() {
   const t = useTranslations();
   return (
-    <Spinner
-      size={24}
-      label={t("common.loading")}
-      showLabel
-      className="loading"
-    />
+    <div className="loading" role="status" aria-label={t("common.loading")}>
+      <span className="loading-content">
+        <OpulyaSpinner size="md" decorative />
+        <span>{t("common.loading")}</span>
+      </span>
+    </div>
   );
 }
 export function MonthPicker({

@@ -82,10 +82,76 @@ test("asset library separates currencies and receives its first quote automatica
       await expect(loading).toBeVisible();
       await expect(loading).toHaveText("Loading");
       await expect(loading.locator(".spinner")).toHaveCount(0);
-      await expect(loading.locator(":scope > .spinner-icon")).toHaveCount(1);
+      await expect(loading.locator(".spinner-icon")).toHaveCount(0);
+      await expect(loading.locator("svg image")).toHaveAttribute(
+        "href",
+        /\/opulya-spinner\.[^/]+\.webp$/,
+      );
+      await expect(
+        page.locator('head link[rel="preload"][href*="/opulya-spinner."]'),
+      ).toHaveAttribute("fetchpriority", "low");
+      await expect(loading.locator("rect[data-bar]")).toHaveCount(3);
+      await expect(loading.getByRole("status")).toHaveCount(0);
+      const backdrop = () =>
+        loading.evaluate((element) => {
+          const style = getComputedStyle(element, "::before");
+          return {
+            x: parseFloat(style.left),
+            y: parseFloat(style.top),
+            width: parseFloat(style.width),
+            height: parseFloat(style.height),
+            pointerEvents: style.pointerEvents,
+            backdropFilter: style.backdropFilter,
+          };
+        });
+      const viewport = page.viewportSize()!;
+      const widths =
+        testInfo.project.name === "mobile"
+          ? [320, 360, 768]
+          : [1024, 1440, 1920];
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: viewport.height });
+        await expect(async () => {
+          const header = (await page.locator(".topbar").boundingBox())!;
+          const mobileNavigation = page.locator(".mobile-nav");
+          const bottom = (await mobileNavigation.isVisible())
+            ? (await mobileNavigation.boundingBox())!.y
+            : viewport.height;
+          const content = (await loading
+            .locator(".loading-content")
+            .boundingBox())!;
+          expect(content.x).toBeCloseTo(header.x, 1);
+          expect(content.y).toBeCloseTo(header.y + header.height, 1);
+          expect(content.width).toBeCloseTo(header.width, 1);
+          expect(content.y + content.height).toBeCloseTo(bottom, 1);
+          expect(await backdrop()).toEqual({
+            ...content,
+            pointerEvents: "none",
+            backdropFilter: "blur(2px)",
+          });
+          const logo = (await loading.locator("svg").boundingBox())!;
+          const label = (await loading
+            .locator(".loading-content > span:last-child")
+            .boundingBox())!;
+          expect(logo.x + logo.width / 2).toBeCloseTo(
+            content.x + content.width / 2,
+            1,
+          );
+          expect((logo.y + label.y + label.height) / 2).toBeCloseTo(
+            content.y + content.height / 2,
+            1,
+          );
+        }).toPass({ timeout: 5000 });
+      }
+      await page.setViewportSize(viewport);
+      await expect(loading.locator("svg")).toHaveCSS("opacity", "1");
+      await page.screenshot({
+        path: `test-results/assets-loading-${testInfo.project.name}.png`,
+      });
     } finally {
       releaseAssets();
     }
+    await expect(page.locator(".workspace > .loading")).toHaveCount(0);
     await expect(
       page.getByRole("heading", { name: "Assets", exact: true }),
     ).toBeVisible();

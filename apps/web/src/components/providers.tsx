@@ -6,12 +6,14 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { preload } from "react-dom";
 import { NextIntlClientProvider } from "next-intl";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { resolveLocale, type Locale } from "@opulya/shared";
 import { messages } from "@/i18n/messages";
 import type { User } from "@/lib/types";
 import { ThemeProvider, type Theme } from "./theme-provider";
+import spinnerLogo from "../../public/opulya-spinner.webp";
 const UserContext = createContext<User | null>(null);
 export const useUser = () => useContext(UserContext)!;
 export function Providers({
@@ -53,6 +55,7 @@ export function UserProvider({
   user: User;
   children: ReactNode;
 }) {
+  preload(spinnerLogo.src, { as: "image", fetchPriority: "low" });
   const locale = resolveLocale(user.locale);
   useEffect(() => {
     document.documentElement.lang = locale;
