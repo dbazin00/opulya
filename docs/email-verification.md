@@ -41,6 +41,6 @@ The HTML email includes the Opulya mark and verification button; plain-text mail
 
 ## Limitations and testing
 
-Delivery runs in a bounded, best-effort background task, not a durable queue. A failed send invalidates its token if still current; shutdown before delivery may require a resend. Pending accounts are not automatically purged. Verification is not MFA or a delivery guarantee. Budgets protect outgoing volume, not availability against determined bots; CAPTCHA/edge controls remain additional hardening. Separate databases and other applications using the same provider account do not share these counters.
+Delivery runs in a bounded, best-effort background task, not a durable queue. A failed send invalidates its token if still current; shutdown before delivery may require a resend. Pending registrations without a password or financial records are purged after seven days by startup/hourly privacy cleanup; see [privacy operations](privacy.md). Verification is not MFA or a delivery guarantee. Budgets protect outgoing volume, not availability against determined bots; CAPTCHA/edge controls remain additional hardening. Separate databases and other applications using the same provider account do not share these counters.
 
 `EMAIL_TRANSPORT=test` is restricted to `NODE_ENV=test` and `opulya_test`. Messages are captured privately in memory or the ignored browser-test mail folder. There is no public mailbox endpoint or production verification bypass.

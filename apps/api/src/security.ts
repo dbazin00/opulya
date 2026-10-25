@@ -65,6 +65,7 @@ export const publicUserSelect = {
   locale: true,
   timeZone: true,
   emailVerifiedAt: true,
+  processingRestrictedAt: true,
 } as const;
 export type SessionUser = {
   id: string;
@@ -74,6 +75,7 @@ export type SessionUser = {
   locale: string;
   timeZone: string;
   emailVerifiedAt: Date | null;
+  processingRestrictedAt?: Date | null;
 };
 export interface AuthRequest extends Request {
   user: SessionUser;
@@ -114,6 +116,12 @@ export class AuthGuard implements CanActivate {
     if (!session) throw new UnauthorizedException("UNAUTHORIZED");
     if (!session.user.emailVerifiedAt && req.path !== "/api/auth/logout")
       throw new ForbiddenException("EMAIL_NOT_VERIFIED");
+    // Keep privacy controls available while preventing normal use of restricted data.
+    if (
+      session.user.processingRestrictedAt &&
+      !req.path.startsWith("/api/auth/")
+    )
+      throw new ForbiddenException("PROCESSING_RESTRICTED");
     const now = new Date();
     const policy = sessionPolicy();
     if (

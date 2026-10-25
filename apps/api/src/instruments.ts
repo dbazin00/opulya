@@ -382,20 +382,22 @@ export class InstrumentsService {
         existing.instrumentId !== instrumentId)
     )
       throw new BadRequestException("MARKET_IDENTITY_MISMATCH");
-    return this.db.asset.upsert({
-      where,
-      update: {},
-      create: {
-        userId,
-        instrumentId,
-        symbol: instrument.symbol,
-        name: instrument.name,
-        exchange: instrument.exchange,
-        currency: instrument.currency,
-        assetType: instrument.assetType,
-        marketDataIdentifier: instrument.symbol,
-      },
-    });
+    return this.db.atomic(userId, (tx) =>
+      tx.asset.upsert({
+        where,
+        update: {},
+        create: {
+          userId,
+          instrumentId,
+          symbol: instrument.symbol,
+          name: instrument.name,
+          exchange: instrument.exchange,
+          currency: instrument.currency,
+          assetType: instrument.assetType,
+          marketDataIdentifier: instrument.symbol,
+        },
+      }),
+    );
   }
   async linkLegacy(asset: Asset) {
     const source = asset.instrumentId
@@ -411,6 +413,7 @@ export class InstrumentsService {
       where: {
         id: asset.id,
         userId: asset.userId,
+        user: { processingRestrictedAt: null },
         instrumentId: asset.instrumentId,
         assetType: matched.assetType,
         currency: matched.currency,

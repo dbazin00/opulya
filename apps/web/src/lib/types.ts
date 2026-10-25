@@ -6,6 +6,7 @@ export interface User {
   email: string;
   locale: "en" | "hr";
   timeZone: string;
+  processingRestrictedAt?: string | null;
 }
 export interface Account {
   id: string;

@@ -81,25 +81,40 @@ export function useMonth() {
 export function Workspace({
   view,
   accountId,
+  privacyContact,
 }: {
   view: string;
   accountId?: string;
+  privacyContact?: string;
 }) {
   const t = useTranslations();
   const [currency, setCurrency] = useState("EUR");
   const [month, setMonth] = useMonth();
   const [addAccount, setAddAccount] = useState(false);
   const [addTransaction, setAddTransaction] = useState(false);
+  const user = useUser();
   const accounts = useQuery({
     queryKey: ["accounts"],
     queryFn: () => api<Account[]>("accounts"),
+    enabled: !user.processingRestrictedAt && view !== "settings",
   });
   const categories = useQuery({
     queryKey: ["categories"],
     queryFn: () => api<Category[]>("categories"),
+    enabled: !user.processingRestrictedAt && view !== "settings",
   });
   const showMonth =
     ["transactions", "analytics", "budgets"].includes(view) || !!accountId;
+  if (user.processingRestrictedAt && view !== "settings")
+    return (
+      <div className="workspace">
+        <h1>{t("privacySettings.restrictedTitle")}</h1>
+        <p>{t("privacySettings.restrictedDescription")}</p>
+        <Link className="button" href="/settings">
+          {t("settings.title")}
+        </Link>
+      </div>
+    );
   return (
     <div className="workspace">
       <div className="page-heading">
@@ -203,7 +218,7 @@ export function Workspace({
           )}
         />
       )}
-      {view === "settings" && <SettingsView />}
+      {view === "settings" && <SettingsView privacyContact={privacyContact} />}
       {view === "assets" && <AssetsView />}
       <Modal
         title={t("accounts.add")}

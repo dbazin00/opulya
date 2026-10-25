@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Workspace } from "@/components/workspace";
+import { legalDetails } from "@opulya/shared";
 export default async function Page({
   params,
 }: {
@@ -21,5 +22,11 @@ export default async function Page({
     path.length > (path[0] === "accounts" ? 2 : 1)
   )
     notFound();
-  return <Workspace view={path[0]!} accountId={path[1]} />;
+  return (
+    <Workspace
+      view={path[0]!}
+      accountId={path[1]}
+      privacyContact={legalDetails(process.env).email}
+    />
+  );
 }

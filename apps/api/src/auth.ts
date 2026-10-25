@@ -12,6 +12,7 @@ import {
   UseGuards,
   BadRequestException,
   ForbiddenException,
+  ServiceUnavailableException,
   type OnModuleDestroy,
 } from "@nestjs/common";
 import type { Response } from "express";
@@ -24,6 +25,7 @@ import {
   signupSchema,
   verifyEmailSchema,
   termsVersion,
+  registrationAllowed,
 } from "@opulya/shared";
 import { Database } from "./db.js";
 import { MailService } from "./mail.js";
@@ -138,6 +140,7 @@ export class AuthService implements OnModuleDestroy {
     void delivery.finally(() => this.deliveries.delete(delivery));
   }
   async signup(body: unknown) {
+    this.assertRegistrationAllowed();
     const started = Date.now();
     const input = signupSchema.parse(body);
     this.mail.assertReady();
@@ -159,6 +162,7 @@ export class AuthService implements OnModuleDestroy {
     return this.respondAfter(started);
   }
   async resendVerification(body: unknown) {
+    this.assertRegistrationAllowed();
     const started = Date.now(),
       input = resendVerificationSchema.parse(body);
     this.mail.assertReady();
@@ -170,6 +174,7 @@ export class AuthService implements OnModuleDestroy {
     return this.respondAfter(started);
   }
   async verifyEmail(body: unknown) {
+    this.assertRegistrationAllowed();
     const input = verifyEmailSchema.parse(body);
     const tokenHash = hashToken(input.token);
     const passwordHash = await argon2.hash(input.password, hashing);
@@ -226,6 +231,10 @@ export class AuthService implements OnModuleDestroy {
       timeZone: user.timeZone,
       emailVerifiedAt: user.emailVerifiedAt.toISOString(),
     };
+  }
+  private assertRegistrationAllowed() {
+    if (!registrationAllowed(process.env))
+      throw new ServiceUnavailableException("REGISTRATION_UNAVAILABLE");
   }
   async startSession(userId: string, res: Response, previousToken?: unknown) {
     const token = randomBytes(32).toString("hex");

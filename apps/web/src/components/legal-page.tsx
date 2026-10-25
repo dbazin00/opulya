@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { ArrowLeft } from "lucide-react";
-import { termsVersion } from "@opulya/shared";
+import { pendingRegistrationDays, termsVersion } from "@opulya/shared";
 import type { LegalDetails } from "@/lib/legal-config";
 import { BrandLink } from "./brand-link";
 import { LanguageSelect } from "./language-select";
@@ -70,7 +70,13 @@ export function LegalPage({
             date: new Intl.DateTimeFormat(locale, {
               dateStyle: "long",
               timeZone: "UTC",
-            }).format(new Date("2026-10-22T12:00:00Z")),
+            }).format(
+              new Date(
+                policy === "terms"
+                  ? "2026-10-22T12:00:00Z"
+                  : "2026-10-24T12:00:00Z",
+              ),
+            ),
           })}
         </p>
         {details.draft && (
@@ -85,7 +91,11 @@ export function LegalPage({
             <h2 id={`legal-${section}`}>
               {t(`${policy}.sections.${section}.title`)}
             </h2>
-            <p>{t(`${policy}.sections.${section}.body`)}</p>
+            <p>
+              {t(`${policy}.sections.${section}.body`, {
+                days: pendingRegistrationDays,
+              })}
+            </p>
             {section === "controller" && (
               <dl className="legal-contact">
                 <dt>{t("operator")}</dt>

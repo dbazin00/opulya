@@ -1,4 +1,8 @@
-import { Injectable, type OnModuleDestroy } from "@nestjs/common";
+import {
+  ForbiddenException,
+  Injectable,
+  type OnModuleDestroy,
+} from "@nestjs/common";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Prisma } from "./generated/prisma/client.js";
 import { refreshBalanceSnapshots } from "./balance-snapshots.js";
@@ -51,16 +55,20 @@ export class Database extends PrismaClient implements OnModuleDestroy {
   async atomic<T>(
     userId: string,
     action: (tx: Prisma.TransactionClient) => Promise<T>,
+    options?: { allowRestricted?: boolean },
   ): Promise<T> {
     for (let attempt = 0; ; attempt++) {
       try {
         return await this.$transaction(
           async (tx) => {
             // Serialize writes per user so concurrent trades cannot oversell and category moves cannot race.
-            await tx.user.update({
+            const user = await tx.user.update({
               where: { id: userId },
               data: { ledgerVersion: { increment: 1 } },
+              select: { processingRestrictedAt: true },
             });
+            if (user.processingRestrictedAt && !options?.allowRestricted)
+              throw new ForbiddenException("PROCESSING_RESTRICTED");
             return action(tx);
           },
           { isolationLevel: "Serializable", timeout: 15_000 },

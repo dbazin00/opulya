@@ -10,7 +10,8 @@ import { LanguageSelect } from "./language-select";
 import { LegalLinks } from "./legal-links";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "./theme-provider";
-export function SettingsView() {
+import { PrivacySettings } from "./privacy-settings";
+export function SettingsView({ privacyContact }: { privacyContact?: string }) {
   const t = useTranslations();
   const user = useUser();
   const { theme, setTheme } = useTheme();
@@ -39,14 +40,7 @@ export function SettingsView() {
     <div className="settings-layout">
       <section className="section">
         <h2>{t("settings.profile")}</h2>
-        <dl className="profile-list">
-          <dt>{t("auth.firstName")}</dt>
-          <dd>{user.firstName}</dd>
-          <dt>{t("auth.lastName")}</dt>
-          <dd>{user.lastName}</dd>
-          <dt>{t("auth.email")}</dt>
-          <dd>{user.email}</dd>
-        </dl>
+        <ProfileForm />
       </section>
       <section className="section">
         <h2>{t("settings.preferences")}</h2>
@@ -118,6 +112,79 @@ export function SettingsView() {
         </form>
         <LegalLinks />
       </section>
+      <PrivacySettings contact={privacyContact} />
     </div>
+  );
+}
+
+function ProfileForm() {
+  const t = useTranslations();
+  const user = useUser();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>();
+  const [saved, setSaved] = useState(false);
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setSaved(false);
+    setError(null);
+    try {
+      await api(
+        "auth/profile",
+        Object.fromEntries(new FormData(event.currentTarget)),
+        "PATCH",
+      );
+      router.refresh();
+      setSaved(true);
+    } catch (error) {
+      setError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <form className="entry-form" onSubmit={submit}>
+      <Field label={t("auth.firstName")}>
+        {(id) => (
+          <input
+            id={id}
+            name="firstName"
+            defaultValue={user.firstName}
+            maxLength={100}
+            autoComplete="given-name"
+            required
+            disabled={busy}
+          />
+        )}
+      </Field>
+      <Field label={t("auth.lastName")}>
+        {(id) => (
+          <input
+            id={id}
+            name="lastName"
+            defaultValue={user.lastName}
+            maxLength={100}
+            autoComplete="family-name"
+            required
+            disabled={busy}
+          />
+        )}
+      </Field>
+      <Field label={t("auth.email")} hint={t("settings.emailCorrection")}>
+        {(id) => <input id={id} type="email" value={user.email} readOnly />}
+      </Field>
+      <ErrorNotice error={error} />
+      {saved && (
+        <p role="status" className="positive">
+          {t("settings.profileSaved")}
+        </p>
+      )}
+      <div className="form-footer">
+        <Button type="submit" busy={busy}>
+          {t("common.save")}
+        </Button>
+      </div>
+    </form>
   );
 }

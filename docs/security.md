@@ -37,6 +37,8 @@ Market requests use the server-only Yahoo client, metadata is validated, cached 
 
 ## Deployment responsibilities
 
+Settings privacy actions are scoped to the authenticated user. Export, erasure and processing restrictions require the current password and have a separate request limit. Downloads omit password and token hashes. Erasure serializes with ledger writes and removes correction chains, financial records, recipient counters and sessions atomically; it does not delete shared public instruments. Restricted users retain access to privacy controls, authentication and preferences but cannot use financial endpoints. See [privacy operations](privacy.md) for provider-held records and backup handling.
+
 Use HTTPS, private PostgreSQL networking, verified database TLS, least-privilege application/migration roles, patching, backups and restore tests. Set production environment values explicitly; do not reuse development credentials. See [database setup](database-credentials.md).
 
 Use `npm ci` with the committed lockfile. Run `npm audit --audit-level=moderate` when reviewing dependencies; assess advisories and test targeted changes rather than blindly upgrading.

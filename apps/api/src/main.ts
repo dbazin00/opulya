@@ -11,6 +11,8 @@ import { rateLimit } from "express-rate-limit";
 import { z } from "@opulya/shared";
 import { Database } from "./db.js";
 import { AuthController, AuthService } from "./auth.js";
+import { PrivacyController, PrivacyService } from "./privacy.js";
+import { RetentionService } from "./retention.js";
 import {
   AuthGuard,
   SafeErrors,
@@ -43,10 +45,17 @@ class HealthController {
   }
 }
 @Module({
-  controllers: [HealthController, AuthController, FinanceController],
+  controllers: [
+    HealthController,
+    AuthController,
+    PrivacyController,
+    FinanceController,
+  ],
   providers: [
     Database,
     AuthService,
+    PrivacyService,
+    RetentionService,
     MailService,
     AuthGuard,
     LedgerService,
@@ -122,6 +131,16 @@ export async function bootstrap(port = Number(process.env.API_PORT ?? 4000)) {
       windowMs: 15 * 60_000,
       limit: 20,
       skipSuccessfulRequests: true,
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+      message: { code: "RATE_LIMITED" },
+    }),
+  );
+  app.use(
+    ["/api/auth/export", "/api/auth/account", "/api/auth/processing"],
+    rateLimit({
+      windowMs: 15 * 60_000,
+      limit: 10,
       standardHeaders: "draft-8",
       legacyHeaders: false,
       message: { code: "RATE_LIMITED" },

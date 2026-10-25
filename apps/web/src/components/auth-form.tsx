@@ -32,11 +32,13 @@ export function AuthForm({
   verify = false,
   pending = false,
   legalDraft = false,
+  registrationClosed = false,
 }: {
   signup: boolean;
   verify?: boolean;
   pending?: boolean;
   legalDraft?: boolean;
+  registrationClosed?: boolean;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -119,6 +121,7 @@ export function AuthForm({
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (pending && (!pendingLoaded || remaining > 0)) return;
+    if (signup && registrationClosed) return;
     const form = event.currentTarget;
     if (signup && !acceptTerms) {
       form.reportValidity();
@@ -481,7 +484,11 @@ export function AuthForm({
                 </div>
                 {legalDraft && (
                   <p className="signup-legal-draft" role="note">
-                    {t("legal.signupDraft")}
+                    {t(
+                      registrationClosed
+                        ? "legal.signupClosed"
+                        : "legal.signupDraft",
+                    )}
                   </p>
                 )}
               </>
@@ -499,7 +506,7 @@ export function AuthForm({
                 (newPassword && (!lengthMet || !matchMet)) ||
                 (verify && !token) ||
                 (pending && remaining > 0) ||
-                (signup && !acceptTerms)
+                (signup && (!acceptTerms || registrationClosed))
               }
             >
               {t(

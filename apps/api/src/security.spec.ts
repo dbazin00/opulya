@@ -21,6 +21,35 @@ afterEach(() => {
 });
 
 describe("session security", () => {
+  it("denies financial requests for restricted users before touching the session", async () => {
+    const updateMany = vi.fn();
+    const guard = new AuthGuard({
+      session: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: "s",
+          user: {
+            id: "u",
+            emailVerifiedAt: new Date(),
+            processingRestrictedAt: new Date(),
+          },
+        }),
+        updateMany,
+      },
+    } as unknown as Database);
+    const context = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          method: "GET",
+          path: "/api/accounts",
+          cookies: { [cookieName()]: "b".repeat(64) },
+        }),
+      }),
+    } as unknown as ExecutionContext;
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      "PROCESSING_RESTRICTED",
+    );
+    expect(updateMany).not.toHaveBeenCalled();
+  });
   it("blocks legacy unverified sessions from protected data", async () => {
     const updateMany = vi.fn();
     const guard = new AuthGuard({

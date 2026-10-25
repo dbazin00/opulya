@@ -1732,18 +1732,37 @@ strong {
   gap: 60px;
   max-width: 900px;
 }
-.profile-list {
+.privacy-settings {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+}
+.privacy-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 22px 20px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 28px;
+  margin-bottom: 28px;
+}
+.privacy-actions > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+.privacy-actions h3 {
+  font-size: 15px;
+}
+.privacy-actions p {
+  flex: 1;
   font-size: 13px;
 }
-.profile-list dt {
-  color: var(--muted);
+.privacy-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--green);
 }
-.profile-list dd {
-  margin: 0;
-  overflow-wrap: anywhere;
+.privacy-confirmation .form-footer {
+  flex-wrap: wrap;
 }
 .auth-page {
   min-height: 100dvh;

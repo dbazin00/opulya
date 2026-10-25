@@ -490,6 +490,41 @@ export const en = {
     locale: "Display language",
     timezoneHint: "Monthly and daily reports use this time zone.",
     saved: "Preferences saved",
+    profileSaved: "Profile saved",
+    emailCorrection:
+      "For an email correction, contact the operator using the privacy link below. A new address must be verified before it can be used to sign in.",
+  },
+  privacySettings: {
+    title: "Privacy and your data",
+    exportTitle: "Export your data",
+    exportDescription:
+      "Download your profile, accounts, categories, budgets and complete transaction history as JSON. Keep the file private.",
+    exportAction: "Download data",
+    exportConfirmation:
+      "Confirm your password to download your application data. For provider-held records or a wider access request, contact the operator.",
+    restrictTitle: "Restrict processing",
+    restrictDescription:
+      "Pause access to financial records and new financial activity without deleting your data. Privacy controls remain available.",
+    restrictAction: "Restrict processing",
+    restrictConfirmation:
+      "Financial views and changes will be blocked. Stored records remain, and essential authentication and security processing continues. Other signed-in sessions will be revoked.",
+    restrictedTitle: "Processing is restricted",
+    restrictedDescription:
+      "Your financial records are retained but financial views and changes are paused. You can export or delete your data, contact the operator, or explicitly resume processing in Settings.",
+    resumeTitle: "Resume processing",
+    resumeAction: "Resume processing",
+    resumeConfirmation:
+      "Continuing instructs Opulya to lift your restriction and restore financial views and changes. Contact the operator first if a disputed privacy request is still unresolved.",
+    deleteTitle: "Delete your account",
+    deleteDescription:
+      "Permanently erase your profile and all financial records from the active application database. This cannot be undone.",
+    deleteAction: "Delete account",
+    deleteConfirmation:
+      "All accounts, categories, budgets, assets and transaction history will be permanently erased and all sessions revoked. Download your data first if needed. Provider-held email, logs and backups follow the retention schedule in the Privacy Notice; contact the operator for those records.",
+    deleteConfirmLabel: "Type DELETE to confirm",
+    contactDescription:
+      "For access, email correction, objections, other restrictions or provider-held data, contact the operator. These controls do not limit your statutory rights.",
+    contactAction: "Privacy requests and contact",
   },
   types: {
     CASH: "Cash",
@@ -529,6 +564,11 @@ export const en = {
   errors: {
     VALIDATION_ERROR: "Check the form values and try again.",
     INVALID_CREDENTIALS: "The email or password is incorrect.",
+    INVALID_PASSWORD: "The password is incorrect. No changes were made.",
+    PROCESSING_RESTRICTED:
+      "Processing is restricted. Open Settings to manage your privacy choices.",
+    REGISTRATION_UNAVAILABLE:
+      "Registration is paused until the operator has completed the privacy setup. Existing users can still sign in.",
     SIGNUP_FAILED:
       "Unable to create this account. Try signing in or use a different email.",
     UNAUTHORIZED: "Please sign in again.",
@@ -1077,6 +1117,41 @@ export const hr: typeof en = {
     locale: "Jezik prikaza",
     timezoneHint: "Mjesečna i dnevna izvješća koriste ovu vremensku zonu.",
     saved: "Postavke su spremljene",
+    profileSaved: "Profil je spremljen",
+    emailCorrection:
+      "Za ispravak e-pošte kontaktirajte voditelja putem poveznice za privatnost ispod. Novu adresu treba potvrditi prije korištenja za prijavu.",
+  },
+  privacySettings: {
+    title: "Privatnost i vaši podaci",
+    exportTitle: "Izvoz podataka",
+    exportDescription:
+      "Preuzmite profil, račune, kategorije, budžete i cijelu povijest transakcija u JSON formatu. Čuvajte datoteku privatno.",
+    exportAction: "Preuzmi podatke",
+    exportConfirmation:
+      "Potvrdite lozinku za preuzimanje podataka aplikacije. Za zapise kod pružatelja ili širi zahtjev za pristup kontaktirajte voditelja.",
+    restrictTitle: "Ograničenje obrade",
+    restrictDescription:
+      "Pauzirajte pristup financijskim zapisima i nove financijske aktivnosti bez brisanja podataka. Kontrole privatnosti ostaju dostupne.",
+    restrictAction: "Ograniči obradu",
+    restrictConfirmation:
+      "Financijski prikazi i promjene bit će blokirani. Zapisi ostaju pohranjeni, a nužna autentifikacija i sigurnosna obrada se nastavljaju. Ostale prijavljene sesije bit će opozvane.",
+    restrictedTitle: "Obrada je ograničena",
+    restrictedDescription:
+      "Financijski zapisi su sačuvani, ali prikazi i promjene su pauzirani. U Postavkama možete izvesti ili obrisati podatke, kontaktirati voditelja ili izričito nastaviti obradu.",
+    resumeTitle: "Nastavak obrade",
+    resumeAction: "Nastavi obradu",
+    resumeConfirmation:
+      "Nastavkom tražite ukidanje ograničenja i ponovno omogućavanje financijskih prikaza i promjena. Prvo kontaktirajte voditelja ako sporni zahtjev za privatnost još nije riješen.",
+    deleteTitle: "Brisanje korisničkog računa",
+    deleteDescription:
+      "Trajno izbrišite profil i sve financijske zapise iz aktivne baze aplikacije. Ova se radnja ne može poništiti.",
+    deleteAction: "Izbriši korisnički račun",
+    deleteConfirmation:
+      "Svi računi, kategorije, budžeti, imovina i povijest transakcija bit će trajno izbrisani, a sve sesije opozvane. Prvo preuzmite podatke ako ih trebate. E-pošta, zapisi i sigurnosne kopije kod pružatelja slijede raspored čuvanja iz Obavijesti o privatnosti; za te zapise kontaktirajte voditelja.",
+    deleteConfirmLabel: "Upišite DELETE za potvrdu",
+    contactDescription:
+      "Za pristup, ispravak e-pošte, prigovore, druga ograničenja ili podatke kod pružatelja kontaktirajte voditelja. Ove kontrole ne ograničavaju vaša zakonska prava.",
+    contactAction: "Zahtjevi za privatnost i kontakt",
   },
   types: {
     CASH: "Gotovina",
@@ -1116,6 +1191,11 @@ export const hr: typeof en = {
   errors: {
     VALIDATION_ERROR: "Provjerite unesene podatke i pokušajte ponovno.",
     INVALID_CREDENTIALS: "E-pošta ili lozinka nisu ispravni.",
+    INVALID_PASSWORD: "Lozinka nije ispravna. Promjene nisu napravljene.",
+    PROCESSING_RESTRICTED:
+      "Obrada je ograničena. Otvorite Postavke za upravljanje privatnošću.",
+    REGISTRATION_UNAVAILABLE:
+      "Registracija je pauzirana dok voditelj ne dovrši postavljanje privatnosti. Postojeći korisnici i dalje se mogu prijaviti.",
     SIGNUP_FAILED:
       "Račun nije moguće izraditi. Pokušajte se prijaviti ili upotrijebite drugu adresu e-pošte.",
     UNAUTHORIZED: "Ponovno se prijavite.",

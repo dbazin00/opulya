@@ -141,6 +141,7 @@ export function Shell({ children }: { children: ReactNode }) {
               className="button"
               aria-label={t("transactions.add")}
               title={t("transactions.add")}
+              disabled={!!user.processingRestrictedAt}
               onClick={() => setAdd(true)}
             >
               <Plus size={18} aria-hidden="true" />

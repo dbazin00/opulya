@@ -9,6 +9,8 @@ export const enLegal = {
     "The operator's identity, contact details, retention schedule or international-transfer arrangements have not all been confirmed. These notices are not ready for a public launch. Use test data only until they are completed.",
   signupDraft:
     "Privacy details are still being finalized. Use test data only for now.",
+  signupClosed:
+    "Registration is paused until the operator completes the privacy setup. Existing users can still sign in.",
   signupNotice:
     "Before creating an account, read our <terms>Terms of Use</terms>, <privacy>Privacy Notice</privacy> and <security>Security Information</security>.",
   operator: "Data controller",
@@ -33,7 +35,7 @@ export const enLegal = {
       },
       data: {
         title: "Information we handle",
-        body: "We store your name, email address, password hash, verification and session records, accepted terms version and acceptance time, language and time zone. We also store the accounts, balances, categories, budgets, transactions, descriptions, investment activity and asset selections you enter. Requests expose technical information, including IP address and browser information, to the servers handling them. The app does not request your bank or broker credentials. Avoid entering other people's details or sensitive information in descriptions.",
+        body: "We store your name, email address, password hash, verification and session records, accepted terms version and acceptance time, processing-restriction status, language and time zone. We also store the accounts, balances, categories, budgets, transactions, descriptions, investment activity and asset selections you enter. Requests expose technical information, including IP address and browser information, to the servers handling them. The app does not request your bank or broker credentials. Avoid entering other people's details or sensitive information in descriptions.",
       },
       purposes: {
         title: "Purposes and legal grounds",
@@ -49,15 +51,15 @@ export const enLegal = {
       },
       retention: {
         title: "Retention and deletion",
-        body: "Financial records remain while your account exists. Archiving an account or category, or correcting or voiding a transaction, does not erase the original history. The app does not currently delete inactive or unverified accounts automatically. Verification links expire and sessions have server-enforced expiry, but expiry is not the same as immediate deletion of their records. To request account and personal-data deletion, contact the operator. There is no self-service account deletion or complete data-export tool yet. Any justified retention exception and backup deletion schedule must be explained when handling a request.",
+        body: "Financial records remain while your account exists, including inactive verified accounts; there is no automatic financial-history deletion. Archiving, correcting or voiding records does not erase their history. Settings lets you download application data and permanently delete your user account and its financial records from the active database. Unverified registrations without a password or financial records are removed after {days} days. Expired verification-token hashes, expired or idle sessions, and expired email-abuse counters are cleaned up at startup and hourly while the API is running; cleanup resumes when a sleeping service wakes. Recipient counters expire within one day and are removed on self-service account deletion. Retention for provider-held email, technical logs, backups and any justified exceptions is specified below and requires operator handling. Backup copies are not erased by the in-app deletion button.",
       },
       storage: {
         title: "Cookies and browser storage",
-        body: "A first-party session cookie authenticates you. A language cookie remembers your choice for up to one year. Browser session storage remembers your pending verification email address and resend cooldown; it is cleared after successful verification or when you choose another address. The app currently includes no advertising cookies, third-party audience analytics or marketing-email feature. Hosting providers may separately process technical security and delivery records. Optional tracking must be assessed and, where required, consent obtained before it is introduced.",
+        body: "A first-party session cookie authenticates you until the session expires. OPULYA_LOCALE and OPULYA_THEME remember your language and appearance choices for up to one year. Browser session storage remembers your pending verification email address and resend cooldown; it is cleared after successful verification, account deletion or when you choose another address. These are authentication and preference functions, not advertising tracking. The app currently includes no advertising cookies, third-party audience analytics or marketing-email feature. Hosting providers may separately process technical security and delivery records. Optional tracking must be assessed and, where required, consent obtained before it is introduced.",
       },
       rights: {
         title: "Your privacy rights",
-        body: "Depending on the applicable law and the processing, you may request access, correction, deletion, restriction or portability of your data, and object to processing based on legitimate interests. Where processing relies on consent, you may withdraw it without affecting earlier lawful processing. Send requests to the contact above; identity verification may be necessary. Under GDPR, requests normally require a response within one month, subject to permitted extensions. You may complain to your local supervisory authority, including AZOP in Croatia. These rights are not limited to the controls currently available in the app.",
+        body: "Depending on the applicable law and the processing, you may request access, correction, deletion, restriction or portability of your data, and object to processing based on legitimate interests. Where processing relies on consent, you may withdraw it without affecting earlier lawful processing. Settings provides profile-name correction, a machine-readable JSON export, account deletion and a processing restriction. Restriction blocks financial views and changes but retains records; essential authentication and security processing continues. You can explicitly resume processing in Settings. For email correction, provider-held records, objections or other requests, contact the operator above; proportionate identity verification may be necessary. These controls do not limit your rights. Requests normally require a response within one month, subject to permitted extensions. You may complain to your local supervisory authority, including AZOP in Croatia.",
       },
       choices: {
         title: "Your choices and automated processing",
@@ -136,6 +138,8 @@ export const hrLegal: typeof enLegal = {
     "Identitet voditelja, kontaktni podaci, rokovi čuvanja ili uvjeti međunarodnog prijenosa još nisu u cijelosti potvrđeni. Ove obavijesti nisu spremne za javno pokretanje usluge. Do dovršetka koristite samo testne podatke.",
   signupDraft:
     "Pojedinosti o privatnosti još se dovršavaju. Zasad koristite samo testne podatke.",
+  signupClosed:
+    "Registracija je pauzirana dok voditelj ne dovrši postavljanje privatnosti. Postojeći korisnici i dalje se mogu prijaviti.",
   signupNotice:
     "Prije izrade računa pročitajte <terms>Uvjete korištenja</terms>, <privacy>Obavijest o privatnosti</privacy> i <security>Informacije o sigurnosti</security>.",
   operator: "Voditelj obrade",
@@ -160,7 +164,7 @@ export const hrLegal: typeof enLegal = {
       },
       data: {
         title: "Koje podatke obrađujemo",
-        body: "Pohranjujemo vaše ime, prezime, adresu e-pošte, sažetak lozinke, zapise potvrde i sesije, verziju prihvaćenih uvjeta i vrijeme prihvaćanja, jezik i vremensku zonu. Pohranjujemo i račune, stanja, kategorije, budžete, transakcije, opise, ulagačke aktivnosti i odabranu imovinu koje unosite. Zahtjevi poslužiteljima otkrivaju tehničke podatke, uključujući IP adresu i podatke o pregledniku. Aplikacija ne traži pristupne podatke banke ili brokera. U opise nemojte unositi podatke drugih osoba ni osjetljive informacije.",
+        body: "Pohranjujemo vaše ime, prezime, adresu e-pošte, sažetak lozinke, zapise potvrde i sesije, verziju prihvaćenih uvjeta i vrijeme prihvaćanja, status ograničenja obrade, jezik i vremensku zonu. Pohranjujemo i račune, stanja, kategorije, budžete, transakcije, opise, ulagačke aktivnosti i odabranu imovinu koje unosite. Zahtjevi poslužiteljima otkrivaju tehničke podatke, uključujući IP adresu i podatke o pregledniku. Aplikacija ne traži pristupne podatke banke ili brokera. U opise nemojte unositi podatke drugih osoba ni osjetljive informacije.",
       },
       purposes: {
         title: "Svrhe i pravne osnove",
@@ -176,15 +180,15 @@ export const hrLegal: typeof enLegal = {
       },
       retention: {
         title: "Čuvanje i brisanje",
-        body: "Financijski zapisi ostaju dok postoji račun. Arhiviranje računa ili kategorije te ispravak ili poništavanje transakcije ne brišu izvornu povijest. Aplikacija trenutačno ne briše automatski neaktivne ili nepotvrđene račune. Poveznice za potvrdu istječu, a sesije imaju poslužiteljski rok isteka, no istek ne znači trenutačno brisanje njihovih zapisa. Za brisanje računa i osobnih podataka kontaktirajte voditelja. Samostalno brisanje računa ili potpuni izvoz podataka još nisu dostupni. Pri obradi zahtjeva moraju se objasniti opravdane iznimke čuvanja i rok brisanja sigurnosnih kopija.",
+        body: "Financijski zapisi ostaju dok postoji korisnički račun, uključujući neaktivne potvrđene račune; nema automatskog brisanja financijske povijesti. Arhiviranje, ispravak ili poništavanje ne brišu izvornu povijest. U Postavkama možete preuzeti podatke aplikacije i trajno izbrisati korisnički račun i njegove financijske zapise iz aktivne baze. Nepotvrđene registracije bez lozinke i financijskih zapisa brišu se nakon {days} dana. Istekli sažeci tokena potvrde, istekle ili neaktivne sesije i istekli brojači e-pošte čiste se pri pokretanju i svakih sat vremena dok API radi; čišćenje se nastavlja nakon buđenja usluge. Brojači primatelja istječu unutar jednog dana i uklanjaju se pri samostalnom brisanju računa. Čuvanje e-pošte, tehničkih zapisa i sigurnosnih kopija kod pružatelja te opravdane iznimke navedeni su ispod i zahtijevaju postupanje voditelja. Gumb za brisanje ne briše sigurnosne kopije.",
       },
       storage: {
         title: "Kolačići i pohrana preglednika",
-        body: "Kolačić sesije prve strane služi prijavi. Jezični kolačić pamti odabir do jedne godine. Pohrana sesije preglednika pamti adresu e-pošte koja čeka potvrdu i rok ponovnog slanja; briše se nakon uspješne potvrde ili odabira druge adrese. Aplikacija trenutačno nema oglasne kolačiće, vanjsku analitiku posjetitelja ni marketinšku e-poštu. Hosting može zasebno obrađivati tehničke sigurnosne i dostavne zapise. Neobvezno praćenje prije uvođenja zahtijeva procjenu i, gdje je potrebno, privolu.",
+        body: "Kolačić sesije prve strane služi prijavi do isteka sesije. OPULYA_LOCALE i OPULYA_THEME pamte jezik i izgled do jedne godine. Pohrana sesije preglednika pamti adresu e-pošte koja čeka potvrdu i rok ponovnog slanja; briše se nakon uspješne potvrde, brisanja računa ili odabira druge adrese. To su funkcije prijave i postavki, ne oglasno praćenje. Aplikacija trenutačno nema oglasne kolačiće, vanjsku analitiku posjetitelja ni marketinšku e-poštu. Hosting može zasebno obrađivati tehničke sigurnosne i dostavne zapise. Neobvezno praćenje prije uvođenja zahtijeva procjenu i, gdje je potrebno, privolu.",
       },
       rights: {
         title: "Vaša prava na privatnost",
-        body: "Ovisno o primjenjivom pravu i obradi, možete zatražiti pristup, ispravak, brisanje, ograničenje ili prenosivost podataka te uložiti prigovor obradi na temelju legitimnih interesa. Ako se obrada temelji na privoli, možete je povući bez utjecaja na raniju zakonitu obradu. Zahtjeve pošaljite na navedeni kontakt; može biti potrebna provjera identiteta. Prema GDPR-u na zahtjeve se u pravilu odgovara u roku od mjesec dana, uz dopuštena produljenja. Možete se obratiti svojem nadzornom tijelu, uključujući AZOP u Hrvatskoj. Ta prava nisu ograničena na mogućnosti trenutačno dostupne u aplikaciji.",
+        body: "Ovisno o pravu i obradi, možete zatražiti pristup, ispravak, brisanje, ograničenje ili prenosivost podataka te uložiti prigovor obradi na temelju legitimnih interesa. Privolu možete povući bez utjecaja na raniju zakonitu obradu. Postavke omogućuju ispravak imena, strojno čitljiv JSON izvoz, brisanje računa i ograničenje obrade. Ograničenje blokira financijske prikaze i promjene, ali čuva zapise; nužna autentifikacija i sigurnosna obrada se nastavljaju. Obradu možete izričito nastaviti u Postavkama. Za ispravak e-pošte, zapise kod pružatelja, prigovore ili druge zahtjeve kontaktirajte voditelja iznad; može biti potrebna razmjerna provjera identiteta. Ove kontrole ne ograničavaju vaša prava. Na zahtjeve se u pravilu odgovara u roku od mjesec dana, uz dopuštena produljenja. Možete se obratiti nadzornom tijelu, uključujući AZOP u Hrvatskoj.",
       },
       choices: {
         title: "Vaš izbor i automatizirana obrada",
