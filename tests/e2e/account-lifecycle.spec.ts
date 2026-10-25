@@ -151,7 +151,16 @@ test("edit account type, confirm empty-account deletion and preserve accounts wi
     page.getByRole("combobox", { name: "Display language", exact: true }),
     "hr",
   );
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page
+    .locator("form")
+    .filter({
+      has: page.getByRole("combobox", {
+        name: "Display language",
+        exact: true,
+      }),
+    })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Postavke", exact: true }),
   ).toBeVisible();

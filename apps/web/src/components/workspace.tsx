@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Pencil,
   Trash2,
+  Undo2,
 } from "lucide-react";
 import {
   currencies,
@@ -172,6 +173,7 @@ export function Workspace({
           <AccountHistory
             accountId={accountId}
             month={month}
+            accounts={accounts.data ?? []}
             categories={categories.data ?? []}
           />
         ) : accounts.isLoading ? (
@@ -504,10 +506,12 @@ function AccountsView({
 function AccountHistory({
   accountId,
   month,
+  accounts,
   categories,
 }: {
   accountId: string;
   month: string;
+  accounts: Account[];
   categories: Category[];
 }) {
   const t = useTranslations();
@@ -527,7 +531,24 @@ function AccountHistory({
     },
   });
   const [adjust, setAdjust] = useState(false);
-  const [investmentEdit, setInvestmentEdit] = useState<EditableInvestment>();
+  const [transactionEdit, setTransactionEdit] = useState<Transaction>();
+  const [investmentEdit, setInvestmentEdit] = useState<string>();
+  const investment = useQuery({
+    queryKey: ["investment", investmentEdit],
+    queryFn: () => api<EditableInvestment>(`investments/${investmentEdit!}`),
+    enabled: !!investmentEdit,
+    retry: false,
+  });
+  const [voiding, setVoiding] = useState<History["entries"][number]>();
+  const voidResource =
+    voiding?.kind === "INVESTMENT" ? "investments" : "transactions";
+  const voidEntry = useMutation({
+    mutationFn: () => api(`${voidResource}/${voiding!.id}/void`, {}),
+    onSuccess: async () => {
+      await client.invalidateQueries();
+      setVoiding(undefined);
+    },
+  });
   const [add, setAdd] = useState(false);
   const history = useQuery({
     queryKey: ["history", accountId, month],
@@ -537,6 +558,10 @@ function AccountHistory({
   if (!history.data) return <ErrorNotice error={history.error} />;
   const h = history.data,
     account = h.account;
+  const investmentAccount =
+    investment.data?.accountId === account.id
+      ? account
+      : accounts.find((a) => a.id === investment.data?.accountId);
   return (
     <>
       <div className="section-heading account-history-heading">
@@ -594,11 +619,16 @@ function AccountHistory({
       <section className="section">
         <h2>{t("accounts.history")}</h2>
         {h.entries.length ? (
-          <div
-            className={`history-list${account.type === "INVESTMENT" ? " investment-account-history" : ""}`}
-          >
+          <div className="account-history">
             {h.entries.map((entry) => {
               const tx = entry.transaction;
+              const standard = "occurredAt" in tx ? tx : undefined;
+              const investmentId = standard
+                ? standard.investmentActivityId
+                : tx.id;
+              const editAccount = standard
+                ? accounts.find((a) => a.id === standard.destinationAccountId)
+                : account;
               const category =
                 "categoryId" in tx
                   ? categories.find((c) => c.id === tx.categoryId)
@@ -650,21 +680,41 @@ function AccountHistory({
                       />
                     </small>
                   </div>
-                  {entry.kind === "INVESTMENT" && "executedAt" in tx && (
+                  <div className="row-actions">
+                    {entry.type !== "ADJUSTMENT" && (
+                      <IconButton
+                        label={t(
+                          investmentId
+                            ? "investments.correct"
+                            : "transactions.correct",
+                        )}
+                        disabled={
+                          !!investmentId &&
+                          (!editAccount || !!editAccount.archivedAt)
+                        }
+                        onClick={() =>
+                          investmentId
+                            ? setInvestmentEdit(investmentId)
+                            : setTransactionEdit(standard)
+                        }
+                      >
+                        <Pencil size={15} />
+                      </IconButton>
+                    )}
                     <IconButton
-                      label={t("investments.correct")}
-                      disabled={!!account.archivedAt}
-                      onClick={() =>
-                        setInvestmentEdit({
-                          ...tx,
-                          sourceAccountId:
-                            entry.funding?.sourceAccountId ?? null,
-                        })
-                      }
+                      label={t(
+                        entry.kind === "INVESTMENT"
+                          ? "investments.void"
+                          : "transactions.void",
+                      )}
+                      onClick={() => {
+                        voidEntry.reset();
+                        setVoiding(entry);
+                      }}
                     >
-                      <Pencil size={16} />
+                      <Undo2 size={15} />
                     </IconButton>
-                  )}
+                  </div>
                 </article>
               );
             })}
@@ -677,17 +727,65 @@ function AccountHistory({
         <InvestmentView accounts={[account]} embedded />
       )}
       <Modal
+        title={t("transactions.correct")}
+        open={!!transactionEdit}
+        onClose={() => setTransactionEdit(undefined)}
+      >
+        {transactionEdit && (
+          <TransactionForm
+            existing={transactionEdit}
+            onDone={() => setTransactionEdit(undefined)}
+          />
+        )}
+      </Modal>
+      <Modal
         title={t("investments.correct")}
         open={!!investmentEdit}
         onClose={() => setInvestmentEdit(undefined)}
       >
-        {investmentEdit && (
-          <InvestmentForm
-            account={account}
-            existing={investmentEdit}
-            onDone={() => setInvestmentEdit(undefined)}
-          />
+        {investmentEdit &&
+          (investment.isLoading ? (
+            <Loading />
+          ) : investment.data && investmentAccount ? (
+            <InvestmentForm
+              key={investment.data.id}
+              account={investmentAccount}
+              existing={investment.data}
+              onDone={() => setInvestmentEdit(undefined)}
+            />
+          ) : investment.error ? (
+            <ErrorNotice error={investment.error} />
+          ) : null)}
+      </Modal>
+      <Modal
+        title={t(`${voidResource}.voidTitle`)}
+        description={t(
+          voiding?.funding
+            ? "investments.voidFundingBody"
+            : `${voidResource}.voidBody`,
         )}
+        open={!!voiding}
+        onClose={() => {
+          if (!voidEntry.isPending) setVoiding(undefined);
+        }}
+      >
+        <ErrorNotice error={voidEntry.error} />
+        <div className="form-footer">
+          <Button
+            className="secondary"
+            disabled={voidEntry.isPending}
+            onClick={() => setVoiding(undefined)}
+          >
+            {t("common.cancel")}
+          </Button>
+          <Button
+            className="danger"
+            busy={voidEntry.isPending}
+            onClick={() => voidEntry.mutate()}
+          >
+            {t("common.confirm")}
+          </Button>
+        </div>
       </Modal>
       <Modal
         title={t(deleting ? "accounts.deleteTitle" : "accounts.edit")}

@@ -1140,16 +1140,20 @@ strong {
 .row-actions .icon-button {
   width: 36px;
 }
-.transaction-row .row-actions {
+.transaction-row .row-actions,
+.history-row .row-actions {
   display: grid;
   grid-template-columns: repeat(2, 44px);
   width: 88px;
+  gap: 0;
   margin-top: -11px;
 }
-.transaction-row .row-actions .icon-button {
+.transaction-row .row-actions .icon-button,
+.history-row .row-actions .icon-button {
   width: 44px;
 }
-.transaction-row .row-actions .icon-button:last-child {
+.transaction-row .row-actions .icon-button:last-child,
+.history-row .row-actions .icon-button:last-child {
   grid-column: 2;
 }
 .month-picker {
@@ -1185,9 +1189,9 @@ strong {
   width: 150px;
 }
 .history-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(100px, 28%) 88px;
+  align-items: start;
   gap: 16px;
   border-bottom: 1px solid var(--line);
   padding: 18px 0;
@@ -1197,9 +1201,6 @@ strong {
   flex-direction: column;
   gap: 5px;
   min-width: 0;
-}
-.history-row > div:first-child {
-  flex: 1;
 }
 .history-row > div:nth-child(2) {
   text-align: right;
@@ -1216,27 +1217,6 @@ strong {
   font-size: 11px;
   color: var(--muted);
   overflow-wrap: anywhere;
-}
-.investment-history .history-row,
-.investment-account-history .history-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(100px, 28%) 88px;
-  align-items: start;
-}
-.investment-account-history .history-row {
-  grid-template-columns: minmax(0, 1fr) minmax(100px, 28%) 44px;
-}
-.investment-history .row-actions {
-  display: grid;
-  grid-template-columns: repeat(2, 44px);
-  width: 88px;
-  margin-top: -11px;
-}
-.investment-history .row-actions .icon-button {
-  width: 44px;
-}
-.investment-account-history .history-row > .icon-button {
-  margin-top: -11px;
 }
 .history-row small {
   font-size: 10px;
@@ -2662,27 +2642,16 @@ strong {
     gap: 10px;
   }
   .history-row {
-    align-items: flex-start;
-  }
-  .history-row > div:nth-child(2) {
-    max-width: 52%;
-  }
-  .investment-history .history-row,
-  .investment-account-history .history-row {
     grid-template-columns: minmax(0, 1fr) 88px;
   }
-  .investment-history .history-row > div:first-child,
-  .investment-account-history .history-row > div:first-child {
+  .history-row > div:first-child {
     grid-column: 1 / -1;
   }
-  .investment-history .history-row > div:nth-child(2),
-  .investment-account-history .history-row > div:nth-child(2) {
+  .history-row > div:nth-child(2) {
     grid-column: 1;
-    max-width: none;
     text-align: left;
   }
-  .investment-history .row-actions,
-  .investment-account-history .history-row > .icon-button {
+  .history-row .row-actions {
     grid-column: 2;
     grid-row: 2;
     justify-self: end;

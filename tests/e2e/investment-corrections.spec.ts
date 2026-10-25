@@ -182,7 +182,7 @@ test("edit investment activities with linked funding and localized exact times",
 
   await page.goto(`/accounts/${account.id}`);
   const saleRow = page
-    .locator(".investment-account-history .history-row")
+    .locator(".account-history .history-row")
     .filter({ has: page.getByText("Sell", { exact: true }) });
   await saleRow
     .getByRole("button", { name: "Edit activity", exact: true })
@@ -280,7 +280,16 @@ test("edit investment activities with linked funding and localized exact times",
     page.getByRole("combobox", { name: "Display language", exact: true }),
     "hr",
   );
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page
+    .locator("form")
+    .filter({
+      has: page.getByRole("combobox", {
+        name: "Display language",
+        exact: true,
+      }),
+    })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
   await expect(page.locator("html")).toHaveAttribute("lang", "hr");
   await page.goto("/investments");
   const localizedBuy = page

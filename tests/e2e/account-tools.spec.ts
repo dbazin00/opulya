@@ -309,7 +309,16 @@ test("update account balance and browse every category level", async ({
     .getByRole("combobox", { name: "Display language", exact: true })
     .click();
   await page.getByRole("option", { name: "Hrvatski", exact: true }).click();
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page
+    .locator("form")
+    .filter({
+      has: page.getByRole("combobox", {
+        name: "Display language",
+        exact: true,
+      }),
+    })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Postavke", exact: true }),
   ).toBeVisible();
