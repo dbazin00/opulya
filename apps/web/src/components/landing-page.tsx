@@ -1,6 +1,5 @@
 "use client";
-import { ThemeToggle } from "./theme-toggle";
-
+import Image from "next/image";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -11,6 +10,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   ChartNoAxesCombined,
+  ChartPie,
   Check,
   ChevronDown,
   Landmark,
@@ -24,9 +24,10 @@ import { formatMoney, resolveLocale } from "@opulya/shared";
 import { LanguageSelect } from "./language-select";
 import { BrandLink } from "./brand-link";
 import { LegalLinks } from "./legal-links";
+import { ThemeToggle } from "./theme-toggle";
 import styles from "./landing-page.module.css";
 
-const views = ["overview", "transactions", "investments"] as const;
+const views = ["overview", "transactions", "budgets", "investments"] as const;
 type View = (typeof views)[number];
 
 function ProductPreview() {
@@ -58,40 +59,34 @@ function ProductPreview() {
       className={styles.preview}
       aria-label={t("landing.preview")}
     >
-      <div className={styles.previewBar}>
-        <div
-          role="tablist"
-          aria-label={t("landing.demoTabs")}
-          className={styles.previewTabs}
-        >
-          <span
-            aria-hidden="true"
-            className={styles.previewIndicator}
-            style={{ transform: `translateX(${views.indexOf(view) * 100}%)` }}
-          />
-          {views.map((item, index) => (
-            <button
-              key={item}
-              ref={(node) => {
-                tabs.current[index] = node;
-              }}
-              type="button"
-              role="tab"
-              id={`${id}-${item}`}
-              aria-controls={`${id}-panel`}
-              aria-selected={view === item}
-              tabIndex={view === item ? 0 : -1}
-              onClick={() => setView(item)}
-              onKeyDown={(event) => navigate(event, index)}
-            >
-              {t(`landing.${item}Tab`)}
-            </button>
-          ))}
-        </div>
-        <span className={styles.example}>
-          <span aria-hidden="true" />
-          {t("landing.example")}
-        </span>
+      <div
+        role="tablist"
+        aria-label={t("landing.demoTabs")}
+        className={styles.previewTabs}
+      >
+        <span
+          aria-hidden="true"
+          className={styles.previewIndicator}
+          style={{ transform: `translateX(${views.indexOf(view) * 100}%)` }}
+        />
+        {views.map((item, index) => (
+          <button
+            key={item}
+            ref={(node) => {
+              tabs.current[index] = node;
+            }}
+            type="button"
+            role="tab"
+            id={`${id}-${item}`}
+            aria-controls={`${id}-panel`}
+            aria-selected={view === item}
+            tabIndex={view === item ? 0 : -1}
+            onClick={() => setView(item)}
+            onKeyDown={(event) => navigate(event, index)}
+          >
+            {t(`landing.${item}Tab`)}
+          </button>
+        ))}
       </div>
       <div
         id={`${id}-panel`}
@@ -136,6 +131,27 @@ function ProductPreview() {
                     <strong>{money(value)}</strong>
                   </div>
                 ))}
+              </div>
+              <div className={styles.previewCashflow}>
+                <div>
+                  <h2>{t("analytics.monthly")}</h2>
+                  <p>{t("landing.demoCashflow")}</p>
+                </div>
+                <div
+                  className={styles.cashflowChart}
+                  role="img"
+                  aria-label={t("landing.demoChartDescription")}
+                >
+                  {[68, 48, 62, 45, 80, 57, 72, 50, 92, 61, 84, 52].map(
+                    (height, index) => (
+                      <span key={index} style={{ height: `${height}%` }} />
+                    ),
+                  )}
+                </div>
+                <div className={styles.cashflowLegend}>
+                  <span>{t("types.INCOME")}</span>
+                  <span>{t("types.EXPENSE")}</span>
+                </div>
               </div>
             </>
           ) : view === "transactions" ? (
@@ -186,6 +202,45 @@ function ProductPreview() {
                 ))}
               </ul>
             </>
+          ) : view === "budgets" ? (
+            <>
+              <div className={styles.previewHeading}>
+                <h2>{t("landing.demoBudgetTitle")}</h2>
+                <span>{t("landing.demoBudgetPeriod")}</span>
+              </div>
+              <div className={styles.budgetSummary}>
+                <div>
+                  <span>{t("landing.demoPlanned")}</span>
+                  <strong>{money("1900")}</strong>
+                </div>
+                <div>
+                  <span>{t("landing.demoRemaining")}</span>
+                  <strong>{money("567.50")}</strong>
+                </div>
+              </div>
+              <ul className={styles.previewBudgets}>
+                {(
+                  [
+                    ["demoGroceries", "282.50", "400"],
+                    ["demoHome", "850", "1000"],
+                    ["demoTravel", "200", "500"],
+                  ] as const
+                ).map(([name, spent, limit]) => (
+                  <li key={name}>
+                    <strong>{t(`landing.${name}`)}</strong>
+                    <span>
+                      {money(spent)} / {money(limit)}
+                    </span>
+                    <progress
+                      value={Number(spent)}
+                      max={Number(limit)}
+                      aria-label={t(`landing.${name}`)}
+                    />
+                  </li>
+                ))}
+              </ul>
+              <p className={styles.priceNote}>{t("landing.demoBudgetNote")}</p>
+            </>
           ) : (
             <>
               <div className={styles.previewHeading}>
@@ -218,7 +273,6 @@ function ProductPreview() {
           )}
         </div>
       </div>
-      <p className={styles.previewCaption}>{t("landing.exampleNote")}</p>
     </section>
   );
 }
@@ -228,8 +282,23 @@ export function LandingPage() {
   const locale = useLocale();
   const [menu, setMenu] = useState(false);
   const navigationId = useId();
+  const pageRoot = useRef<HTMLDivElement>(null);
+  const header = useRef<HTMLElement>(null);
   const navigation = useRef<HTMLElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const element = header.current;
+    if (!element) return;
+    const measure = () =>
+      pageRoot.current?.style.setProperty(
+        "--landing-header-height",
+        `${element.getBoundingClientRect().height}px`,
+      );
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   useEffect(() => {
     if (menu) navigation.current?.querySelector("a")?.focus();
   }, [menu]);
@@ -239,11 +308,12 @@ export function LandingPage() {
     ["questions", "questions"],
   ] as const;
   return (
-    <div className={styles.page}>
+    <div ref={pageRoot} className={styles.page}>
       <a className="skip-link" href="#main-content">
         {t("common.skip")}
       </a>
       <header
+        ref={header}
         className={styles.header}
         onKeyDown={(event) => {
           if (event.key === "Escape" && menu) {
@@ -301,7 +371,7 @@ export function LandingPage() {
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>{t("landing.introduction")}</p>
             <h1 id="landing-title">{t("brand")}</h1>
-            <p className={styles.tagline}>{t("tagline")}</p>
+            <p className={styles.tagline}>{t("landing.headline")}</p>
             <p className={styles.description}>{t("landing.description")}</p>
             <a href="#overview" className={styles.explore}>
               {t("landing.explore")}
@@ -311,6 +381,27 @@ export function LandingPage() {
               <Check size={14} aria-hidden="true" />
               {t("landing.heroNote")}
             </p>
+          </div>
+          <div className={styles.heroVisual}>
+            <Image
+              src="/opulya-landing-laptop.png"
+              alt=""
+              width={1536}
+              height={1024}
+              sizes="(max-width: 1280px) 100vw, 1280px"
+              loading="eager"
+              fetchPriority="high"
+              className={styles.heroImage}
+            />
+          </div>
+        </section>
+        <section className={styles.product} aria-labelledby="product-title">
+          <div className={styles.productIntro}>
+            <div>
+              <p className={styles.eyebrow}>{t("landing.productEyebrow")}</p>
+              <h2 id="product-title">{t("landing.productTitle")}</h2>
+            </div>
+            <p>{t("landing.productBody")}</p>
           </div>
           <ProductPreview />
         </section>
@@ -325,6 +416,7 @@ export function LandingPage() {
               [
                 ["accounts", Wallet],
                 ["spending", ChartNoAxesCombined],
+                ["budgets", ChartPie],
                 ["investments", TrendingUp],
               ] as const
             ).map(([key, Icon], index) => (

@@ -8,20 +8,35 @@ export const en = {
     metaTitle: "Opulya | Your personal finances, together",
     metaDescription:
       "Bring your accounts, everyday spending and manually recorded investments into one considered view with Opulya.",
-    introduction: "Personal finance, thoughtfully connected.",
+    introduction: "Less guesswork. More perspective.",
+    headline: "Know your money. Make room for life.",
     description:
-      "Your everyday spending and long-term investments. Together in one clear, considered view.",
+      "Bring your accounts, monthly budgets and investments together. See where you stand, and plan what comes next.",
     overview: "A clearer picture",
     howItWorks: "Getting started",
     questions: "Questions",
     openMenu: "Open navigation",
     closeMenu: "Close navigation",
-    explore: "Take a look",
-    heroNote: "Manually tracked. Personally yours.",
+    explore: "Explore Opulya",
+    heroNote: "No bank connection. Your records, your control.",
+    productEyebrow: "The whole picture",
+    productTitle: "Your money, connected.",
+    productBody:
+      "From the coffee you bought to the future you’re building. All the details belong in the same picture.",
+    demoCashflow: "Everyday activity, month by month.",
+    demoChartDescription:
+      "Illustrative monthly income and expenses across six months. Income exceeds expenses in each example month.",
+    budgetsTab: "Budgets",
+    demoBudgetTitle: "A plan for this month",
+    demoBudgetPeriod: "September 2026",
+    demoPlanned: "Monthly budget",
+    demoRemaining: "Left to spend",
+    demoGroceries: "Groceries",
+    demoHome: "Home & bills",
+    demoTravel: "Travel",
+    demoBudgetNote:
+      "Repeat your plan, or make a month your own. Investment goals stay separate from everyday spending.",
     preview: "Explore an illustrative Opulya overview",
-    example: "Illustrative example",
-    exampleNote:
-      "Example figures, not an actual account or investment performance.",
     overviewTab: "Overview",
     transactionsTab: "Transactions",
     investmentsTab: "Investments",
@@ -48,6 +63,9 @@ export const en = {
     spendingTitle: "Follow the money. Find the pattern.",
     spendingBody:
       "See your cashflow by month, day or account. Build categories your way and explore every level of your spending.",
+    budgetsTitle: "Give every month a plan.",
+    budgetsBody:
+      "Choose the categories that matter. Set repeating budgets, adapt individual months and plan contributions to your investments.",
     investmentsTitle: "Keep your investments in perspective.",
     investmentsBody:
       "Record purchases, sales, dividends and fees. See your holdings and profit or loss alongside available market prices.",
@@ -632,19 +650,35 @@ export const hr: typeof en = {
     metaTitle: "Opulya | Vaše osobne financije na jednom mjestu",
     metaDescription:
       "Povežite pregled svojih računa, svakodnevne potrošnje i ručno unesenih ulaganja uz Opulyu.",
-    introduction: "Osobne financije, promišljeno povezane.",
+    introduction: "Manje nagađanja. Jasnija slika.",
+    headline: "Jasniji pregled. Više prostora za život.",
     description:
-      "Svakodnevna potrošnja i dugoročna ulaganja. Zajedno u jednom jasnom, preglednom prikazu.",
+      "Objedinite račune, mjesečne budžete i ulaganja. Znajte gdje ste danas i isplanirajte sljedeći korak.",
     overview: "Jasnija slika",
     howItWorks: "Prvi koraci",
     questions: "Pitanja",
     openMenu: "Otvori navigaciju",
     closeMenu: "Zatvori navigaciju",
-    explore: "Pogledajte izbliza",
-    heroNote: "Ručni unos. Vaša osobna slika.",
+    explore: "Istražite Opulyu",
+    heroNote: "Bez povezivanja s bankom. Vaši zapisi, vaša kontrola.",
+    productEyebrow: "Cijela slika",
+    productTitle: "Vaš novac, povezan.",
+    productBody:
+      "Od jutarnje kave do budućnosti koju gradite. Svi detalji pripadaju istoj slici.",
+    demoCashflow: "Svakodnevne aktivnosti, mjesec po mjesec.",
+    demoChartDescription:
+      "Ogledni mjesečni prihodi i rashodi tijekom šest mjeseci. Prihodi premašuju rashode u svakom oglednom mjesecu.",
+    budgetsTab: "Budžeti",
+    demoBudgetTitle: "Plan za ovaj mjesec",
+    demoBudgetPeriod: "Rujan 2026.",
+    demoPlanned: "Mjesečni budžet",
+    demoRemaining: "Preostalo za potrošnju",
+    demoGroceries: "Namirnice",
+    demoHome: "Dom i računi",
+    demoTravel: "Putovanja",
+    demoBudgetNote:
+      "Ponavljajte plan ili prilagodite pojedini mjesec. Ciljevi ulaganja odvojeni su od svakodnevne potrošnje.",
     preview: "Istražite ogledni prikaz Opulye",
-    example: "Ogledni primjer",
-    exampleNote: "Ogledni iznosi, a ne stvarni račun ili prinos ulaganja.",
     overviewTab: "Pregled",
     transactionsTab: "Transakcije",
     investmentsTab: "Ulaganja",
@@ -672,6 +706,9 @@ export const hr: typeof en = {
     spendingTitle: "Pratite novac. Uočite obrasce.",
     spendingBody:
       "Pogledajte novčani tok po mjesecu, danu ili računu. Oblikujte vlastite kategorije i istražite svaku razinu potrošnje.",
+    budgetsTitle: "Dajte svakom mjesecu plan.",
+    budgetsBody:
+      "Odaberite važne kategorije. Postavite ponavljajuće budžete, prilagodite pojedine mjesece i planirajte iznose za ulaganja.",
     investmentsTitle: "Jasnija slika vaših ulaganja.",
     investmentsBody:
       "Bilježite kupnje, prodaje, dividende i naknade. Pratite udjele i dobit ili gubitak uz dostupne tržišne cijene.",

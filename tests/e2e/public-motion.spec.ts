@@ -58,7 +58,7 @@ test("landing transitions preserve panel size and native section links", async (
   const panel = page.getByRole("tabpanel");
   const initial = await panel.boundingBox();
   expect(initial).not.toBeNull();
-  for (const name of ["Transactions", "Investments", "Overview"]) {
+  for (const name of ["Transactions", "Budgets", "Investments", "Overview"]) {
     await page.getByRole("tab", { name, exact: true }).click();
     await expect(panel).toBeVisible();
     expect(
@@ -68,6 +68,10 @@ test("landing transitions preserve panel size and native section links", async (
     ).toContain("preview-appear");
     const box = await panel.boundingBox();
     expect(Math.abs(box!.height - initial!.height)).toBeLessThanOrEqual(1);
+    const content = await panel.locator(":scope > div").boundingBox();
+    expect(content!.y + content!.height).toBeLessThanOrEqual(
+      box!.y + box!.height + 1,
+    );
   }
   if (isMobile)
     await page
