@@ -24,6 +24,10 @@ export function AnalyticsView({
 }) {
   const t = useTranslations();
   const locale = resolveLocale(useLocale());
+  const collator = new Intl.Collator(locale, {
+    sensitivity: "base",
+    numeric: true,
+  });
   const user = useUser();
   const [parentId, setParent] = useState("");
   const [type, setType] = useState("EXPENSE");
@@ -44,6 +48,9 @@ export function AnalyticsView({
   });
   const parent = categories.find((c) => c.id === parentId);
   const a = report.data;
+  const orderedAccounts = [...(a?.accounts ?? [])].sort((a, b) =>
+    collator.compare(a.name, b.name),
+  );
   return (
     <>
       <div className="filters">
@@ -180,7 +187,7 @@ export function AnalyticsView({
                 <h2>{t("analytics.account")}</h2>
                 {a.accounts.length ? (
                   <div className="data-list">
-                    {a.accounts.map((account) => (
+                    {orderedAccounts.map((account) => (
                       <div key={account.id}>
                         <strong>{account.name}</strong>
                         <span className="account-flow">

@@ -162,6 +162,7 @@ export function BudgetForm({
             <Dropdown
               id={id}
               value={"assetId" in target ? target.assetId : target.categoryId}
+              sort={"assetId" in target ? "label" : "path"}
               onValueChange={onTargetChange}
               disabled={save.isPending}
             >

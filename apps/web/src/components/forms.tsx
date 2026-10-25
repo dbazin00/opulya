@@ -465,6 +465,7 @@ export function TransactionForm({
           <Dropdown
             id={id}
             value={selected.id}
+            sort="label"
             onValueChange={(value) => setChosen(value)}
           >
             {list.map((a) => (
@@ -481,6 +482,7 @@ export function TransactionForm({
             <Dropdown
               id={id}
               name="destinationAccountId"
+              sort="label"
               defaultValue={existing?.destinationAccountId ?? ""}
               required
             >
@@ -504,6 +506,7 @@ export function TransactionForm({
             <Dropdown
               id={id}
               name="categoryId"
+              sort="path"
               value={chosenCategory}
               onValueChange={setChosenCategory}
               required
@@ -629,6 +632,7 @@ export function CategoryForm({
           <Dropdown
             id={id}
             name="parentId"
+            sort="path"
             defaultValue={existing?.parentId ?? parentId ?? ""}
           >
             <option value="">{t("categories.root")}</option>
@@ -752,6 +756,7 @@ export function InvestmentForm({
             <Dropdown
               id={id}
               name="assetId"
+              sort="label"
               value={chosenAsset}
               onValueChange={setChosenAsset}
               required
@@ -775,6 +780,7 @@ export function InvestmentForm({
             <Dropdown
               id={id}
               name="sourceAccountId"
+              sort="label"
               value={source}
               onValueChange={setSource}
               required

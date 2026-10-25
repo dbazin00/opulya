@@ -10,7 +10,8 @@ import {
 } from "react";
 import * as Select from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { sortDropdownOptions } from "@/lib/dropdown-options";
 
 type Choice = {
   value: string;
@@ -131,7 +132,11 @@ export function SelectControl({
             <Select.ScrollUpButton className="select-scroll">
               <ChevronUp size={16} aria-hidden="true" />
             </Select.ScrollUpButton>
-            <Select.Viewport className="select-viewport" role="group" tabIndex={0}>
+            <Select.Viewport
+              className="select-viewport"
+              role="group"
+              tabIndex={0}
+            >
               {options.map((option) => (
                 <Select.Item
                   key={option.value}
@@ -202,8 +207,10 @@ function plainText(children: ReactNode): string {
 // Existing localized option declarations share the same control as rich language choices.
 export function Dropdown({
   children,
+  sort,
   ...props
-}: Props & { children: ReactNode }) {
+}: Props & { children: ReactNode; sort?: "label" | "path" }) {
+  const locale = useLocale();
   const options = Children.toArray(children)
     .filter(
       isValidElement<{
@@ -221,5 +228,10 @@ export function Dropdown({
         disabled: option.props.disabled,
       };
     });
-  return <SelectControl {...props} options={options} />;
+  return (
+    <SelectControl
+      {...props}
+      options={sort ? sortDropdownOptions(options, locale, sort) : options}
+    />
+  );
 }

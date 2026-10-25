@@ -18,6 +18,7 @@ import {
   Undo2,
 } from "lucide-react";
 import {
+  accountTypes,
   ledgerTypes,
   formatDate,
   formatTime,
@@ -88,6 +89,7 @@ export function Workspace({
   privacyContact?: string;
 }) {
   const t = useTranslations();
+  const locale = useLocale();
   const currencies = useCurrencies();
   const [currency, setCurrency] = useState("EUR");
   const [month, setMonth] = useMonth();
@@ -99,6 +101,13 @@ export function Workspace({
     queryFn: () => api<Account[]>("accounts"),
     enabled: !user.processingRestrictedAt && view !== "settings",
   });
+  const collator = new Intl.Collator(locale, {
+    sensitivity: "base",
+    numeric: true,
+  });
+  const orderedAccounts = [...(accounts.data ?? [])].sort((a, b) =>
+    collator.compare(a.name, b.name),
+  );
   const categories = useQuery({
     queryKey: ["categories"],
     queryFn: () => api<Category[]>("categories"),
@@ -163,7 +172,7 @@ export function Workspace({
         <Dashboard
           month={month}
           currency={currency}
-          accounts={accounts.data ?? []}
+          accounts={orderedAccounts}
           categories={categories.data ?? []}
           onAddAccount={() => setAddAccount(true)}
         />
@@ -173,14 +182,14 @@ export function Workspace({
           <AccountHistory
             accountId={accountId}
             month={month}
-            accounts={accounts.data ?? []}
+            accounts={orderedAccounts}
             categories={categories.data ?? []}
           />
         ) : accounts.isLoading ? (
           <Loading />
         ) : (
           <AccountsView
-            accounts={accounts.data ?? []}
+            accounts={orderedAccounts}
             onAdd={() => setAddAccount(true)}
           />
         ))}
@@ -188,7 +197,7 @@ export function Workspace({
         <TransactionsView
           month={month}
           currency={currency}
-          accounts={accounts.data ?? []}
+          accounts={orderedAccounts}
           categories={categories.data ?? []}
         />
       )}
@@ -209,15 +218,13 @@ export function Workspace({
         <AnalyticsView
           month={month}
           currency={currency}
-          accounts={accounts.data ?? []}
+          accounts={orderedAccounts}
           categories={categories.data ?? []}
         />
       )}
       {view === "investments" && (
         <InvestmentView
-          accounts={(accounts.data ?? []).filter(
-            (a) => a.type === "INVESTMENT",
-          )}
+          accounts={orderedAccounts.filter((a) => a.type === "INVESTMENT")}
         />
       )}
       {view === "settings" && <SettingsView privacyContact={privacyContact} />}
@@ -471,6 +478,14 @@ function AccountsView({
 }) {
   const t = useTranslations();
   const [archived, setArchived] = useState(false);
+  const groups = accountTypes
+    .map((type) => ({
+      type,
+      accounts: accounts.filter(
+        (account) => account.type === type && (archived || !account.archivedAt),
+      ),
+    }))
+    .filter((group) => group.accounts.length);
   return (
     <>
       <label className="check filter-check">
@@ -482,13 +497,22 @@ function AccountsView({
         {t("accounts.includeArchived")}
       </label>
       {accounts.length ? (
-        <div className="account-grid">
-          {accounts
-            .filter((a) => archived || !a.archivedAt)
-            .map((a) => (
-              <AccountTile key={a.id} account={a} />
-            ))}
-        </div>
+        groups.map((group) => (
+          <section
+            key={group.type}
+            className="section"
+            aria-labelledby={`account-group-${group.type}`}
+          >
+            <h2 id={`account-group-${group.type}`}>
+              {t(`types.${group.type}`)}
+            </h2>
+            <div className="account-grid">
+              {group.accounts.map((account) => (
+                <AccountTile key={account.id} account={account} />
+              ))}
+            </div>
+          </section>
+        ))
       ) : (
         <Empty
           title={t("dashboard.noAccounts")}
