@@ -7,7 +7,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocale, useTranslations } from "next-intl";
 import {
   accountTypes,
-  currencies,
   decimal,
   descendants,
   formatMoney,
@@ -25,6 +24,7 @@ import type {
   Transaction,
 } from "@/lib/types";
 import { Button, Empty, ErrorNotice, Field, Loading, Money } from "./ui";
+import { useCurrencies } from "./providers";
 
 type Translator = ReturnType<typeof useTranslations>;
 export const categoryName = (
@@ -113,6 +113,7 @@ export function AccountForm({
   onDelete?: () => void;
 }) {
   const t = useTranslations();
+  const currencies = useCurrencies();
   const [type, setType] = useState(existing?.type ?? "BANK");
   const save = useSave(
     existing ? `accounts/${existing.id}` : "accounts",
@@ -230,7 +231,7 @@ export function AccountForm({
             </Field>
             <Field label={t("common.currency")}>
               {(id) => (
-                <Dropdown id={id} name="currency">
+                <Dropdown id={id} name="currency" defaultValue="EUR">
                   {currencies.map((v) => (
                     <option key={v}>{v}</option>
                   ))}

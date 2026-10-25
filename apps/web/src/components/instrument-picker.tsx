@@ -9,8 +9,8 @@ import {
   Plus,
   RefreshCw,
 } from "lucide-react";
-import { currencies } from "@opulya/shared";
 import { Dropdown } from "./dropdown";
+import { useCurrencies } from "./providers";
 import { MarketDataCredit } from "./market-data-credit";
 import { AssetListing } from "./asset-listing";
 import { api } from "@/lib/api";
@@ -36,6 +36,7 @@ export function InstrumentPicker({
   initialType?: string;
 }) {
   const t = useTranslations();
+  const currencies = useCurrencies();
   const client = useQueryClient();
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
@@ -45,7 +46,7 @@ export function InstrumentPicker({
       ? initialType
       : "",
   );
-  const [chosenCurrency, setCurrency] = useState<(typeof currencies)[number]>(
+  const [chosenCurrency, setCurrency] = useState(
     currencies.find((value) => value === currency) ?? "EUR",
   );
   const [page, setPage] = useState(0);
@@ -119,9 +120,7 @@ export function InstrumentPicker({
               value={chosenCurrency}
               disabled={!!currency || save.isPending}
               onValueChange={(value) => {
-                setCurrency(
-                  currencies.find((currency) => currency === value) ?? "EUR",
-                );
+                setCurrency(value);
                 resetSelection();
                 setPage(0);
               }}

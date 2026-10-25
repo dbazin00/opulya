@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2 } from "lucide-react";
-import { assetTypes, currencies, priceRefreshInterval } from "@opulya/shared";
+import { assetTypes, priceRefreshInterval } from "@opulya/shared";
 import { api } from "@/lib/api";
 import type { Asset, Portfolio } from "@/lib/types";
 import { useVisible } from "@/lib/use-visible";
@@ -12,6 +12,7 @@ import { Dropdown } from "./dropdown";
 import { InstrumentPicker } from "./instrument-picker";
 import { MarketDataCredit } from "./market-data-credit";
 import { AssetListing, ListingDetails } from "./asset-listing";
+import { useCurrencies } from "./providers";
 import {
   Button,
   Empty,
@@ -25,6 +26,7 @@ import {
 
 export function AssetsView() {
   const t = useTranslations();
+  const currencies = useCurrencies();
   const locale = useLocale();
   const visible = useVisible();
   const [currency, setCurrency] = useState("EUR");

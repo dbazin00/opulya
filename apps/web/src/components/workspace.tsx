@@ -18,7 +18,6 @@ import {
   Undo2,
 } from "lucide-react";
 import {
-  currencies,
   ledgerTypes,
   formatDate,
   formatTime,
@@ -36,7 +35,7 @@ import type {
   Overview,
   Transaction,
 } from "@/lib/types";
-import { useUser } from "./providers";
+import { useCurrencies, useUser } from "./providers";
 import { MarketDataCredit } from "./market-data-credit";
 import {
   Button,
@@ -89,6 +88,7 @@ export function Workspace({
   privacyContact?: string;
 }) {
   const t = useTranslations();
+  const currencies = useCurrencies();
   const [currency, setCurrency] = useState("EUR");
   const [month, setMonth] = useMonth();
   const [addAccount, setAddAccount] = useState(false);

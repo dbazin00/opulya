@@ -26,7 +26,7 @@ export const directorySchema = z
 export const candidateId = (row: InstrumentInput) =>
   `yf:${row.assetType}:${row.currency}:${yahooSymbol(row)}`;
 const candidatePattern =
-  /^yf:(STOCK|ETF|CRYPTO|FUND):(EUR|USD|GBP|CHF|CAD|AUD|JPY):([A-Za-z0-9.=_-]{1,30})$/;
+  /^yf:(STOCK|ETF|CRYPTO|FUND):([A-Z]{3}):([A-Za-z0-9.=_-]{1,30})$/;
 
 @Injectable()
 export class InstrumentDirectory {
@@ -83,7 +83,7 @@ export class InstrumentDirectory {
   }
   async resolve(id: string) {
     const match = candidatePattern.exec(id);
-    if (!match) {
+    if (!match || !currencySchema.safeParse(match[2]).success) {
       if (id.includes(":")) throw new NotFoundException("NOT_FOUND");
       return id;
     }

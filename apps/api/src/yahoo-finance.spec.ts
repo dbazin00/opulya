@@ -138,6 +138,12 @@ describe("Yahoo catalogue and identity", () => {
     );
     expect(yahooInstrument({ ...etf, isin: "IE00B4L5Y984" })?.isin).toBeNull();
   });
+  it.each(["PLN", "SEK", "NOK", "CZK", "INR"])(
+    "accepts verified Yahoo listings priced in %s",
+    (currency) => {
+      expect(yahooInstrument({ ...etf, currency })?.currency).toBe(currency);
+    },
+  );
   it("rejects unsupported currencies, classes, timezones and ambiguous crypto pairs", () => {
     for (const change of [
       { currency: "XYZ" },

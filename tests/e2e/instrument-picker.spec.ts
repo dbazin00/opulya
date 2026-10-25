@@ -480,7 +480,16 @@ test("selects the exact instrument listing and values it using a current quote",
       page.getByRole("combobox", { name: "Display language", exact: true }),
       "hr",
     );
-    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await page
+      .locator("form")
+      .filter({
+        has: page.getByRole("combobox", {
+          name: "Display language",
+          exact: true,
+        }),
+      })
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
     await page.goto("/investments");
     await expect(page.locator(".price-status")).toContainText("Cijena na dan");
     await expect(page.locator(".holding")).toContainText("246,90");

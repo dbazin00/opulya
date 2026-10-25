@@ -3,15 +3,7 @@ import { Decimal } from "decimal.js";
 
 export const locales = ["en", "hr"] as const;
 export const localeSchema = z.enum(locales);
-export const currencies = [
-  "EUR",
-  "USD",
-  "GBP",
-  "CHF",
-  "CAD",
-  "AUD",
-  "JPY",
-] as const;
+export const currencies = Object.freeze(Intl.supportedValuesOf("currency"));
 export const currencySchema = z.enum(currencies);
 export const accountTypes = ["CASH", "BANK", "INVESTMENT"] as const;
 export const transactionTypes = ["INCOME", "EXPENSE", "TRANSFER"] as const;

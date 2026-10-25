@@ -16,13 +16,18 @@ import { ThemeProvider, type Theme } from "./theme-provider";
 import spinnerLogo from "../../public/opulya-spinner.webp";
 const UserContext = createContext<User | null>(null);
 export const useUser = () => useContext(UserContext)!;
+// Reuse the server catalogue so ICU version differences cannot change hydrated options.
+const CurrencyContext = createContext<readonly string[]>([]);
+export const useCurrencies = () => useContext(CurrencyContext);
 export function Providers({
   locale,
   theme,
+  currencies,
   children,
 }: {
   locale: Locale;
   theme: Theme;
+  currencies: readonly string[];
   children: ReactNode;
 }) {
   const [client] = useState(
@@ -36,15 +41,17 @@ export function Providers({
   );
   return (
     <ThemeProvider initialTheme={theme}>
-      <QueryClientProvider client={client}>
-        <NextIntlClientProvider
-          locale={locale}
-          messages={messages[locale]}
-          timeZone="Europe/Zagreb"
-        >
-          {children}
-        </NextIntlClientProvider>
-      </QueryClientProvider>
+      <CurrencyContext.Provider value={currencies}>
+        <QueryClientProvider client={client}>
+          <NextIntlClientProvider
+            locale={locale}
+            messages={messages[locale]}
+            timeZone="Europe/Zagreb"
+          >
+            {children}
+          </NextIntlClientProvider>
+        </QueryClientProvider>
+      </CurrencyContext.Provider>
     </ThemeProvider>
   );
 }

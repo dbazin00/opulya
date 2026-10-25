@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { resolveLocale } from "@opulya/shared";
+import { currencies, resolveLocale } from "@opulya/shared";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 export const metadata = {
@@ -18,7 +18,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} data-theme={theme} data-scroll-behavior="smooth">
       <body>
-        <Providers locale={locale} theme={theme}>
+        <Providers locale={locale} theme={theme} currencies={currencies}>
           {children}
         </Providers>
       </body>
