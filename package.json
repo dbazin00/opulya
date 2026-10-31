@@ -51,6 +51,9 @@
   "overrides": {
     "vite": "8.3.5",
     "deepmerge-ts": "8.0.2",
-    "mysql2": "3.24.5"
+    "mysql2": "3.24.5",
+    "@nestjs/platform-express@12.1.2": {
+      "multer": "2.5.0"
+    }
   }
 }
