@@ -25,6 +25,14 @@ API logs distinguish `Opulya market request limit reached` (including the config
 
 The browser sees HTTP 503 when a catalogue request is unavailable because of a market limit. This is Opulya's response, not the original Yahoo HTTP status. Use the response's `code` and the API logs above for diagnosis. A cooldown reduces repeated rejected calls; it does not guarantee Yahoo will accept the next request.
 
+### Temporary check without a hosted shell
+
+To test Yahoo's session-free chart API from the actual production runtime, temporarily set `MARKET_DIAGNOSTIC=true` in the API service environment and deploy this code. No paid shell or start-command change is needed. The API starts listening first, then makes one diagnostic attempt per process start and logs `Yahoo Finance chart diagnostic`. It uses the existing market budgets, pacing, timeout, response-size limit and shared cooldown; it never switches endpoints in response to a rejected request or retries the probe.
+
+The fixed public test symbol is `IWDA.AS`. Success reports `ok: true`, verified EUR/ETF metadata and availability of a price/timestamp, without logging the price, response body, cookies, credentials or user data. The check creates no assets, listings or transactions; ordinary quota/cooldown counters still apply. It does not change the application's existing quote source.
+
+`ok: false, attempted: false` means the provider was disabled or a budget/cooldown prevented the request. Close Opulya tabs and wait for the existing `retryAt` before running the check; an early attempt does not bypass or shorten that wait. An upstream 429 logs a separate throttling entry with `operation: 'chart'` and `endpoint: 'chart'`. A failed probe does not stop the API. Remove `MARKET_DIAGNOSTIC` after collecting the result to avoid another check on every restart. Successful chart access is evidence for a possible implementation change, not a guarantee of future access or unlimited requests.
+
 ## Catalogue and prices
 
 There are no predefined assets. Search at least two characters, select a currency and optionally an asset type. Results are Yahoo-covered stocks, ETFs, funds and crypto, not a promise of every instrument worldwide. Only selection creates an `Instrument` and a private `Asset`; owned assets are filtered outside the shared cache.

@@ -144,7 +144,7 @@ function yahooStatus(error: unknown) {
     : undefined;
 }
 const defaultBackoffMs = 5 * 60000;
-type YahooEndpoint = "search" | "quote" | "session";
+type YahooEndpoint = "search" | "quote" | "session" | "chart";
 class YahooRateLimitError extends Error {
   readonly status = 429;
   constructor(
@@ -169,6 +169,7 @@ function retryAt(header: string | null, now: number) {
 function yahooEndpoint(input: string | URL | Request): YahooEndpoint {
   const path = new URL(input instanceof Request ? input.url : input).pathname;
   if (path.endsWith("/finance/search")) return "search";
+  if (/\/finance\/chart\//.test(path)) return "chart";
   if (/\/finance\/quote(?:Summary)?(?:\/|$)/.test(path)) return "quote";
   return "session";
 }
@@ -269,7 +270,7 @@ export class YahooFinanceProvider {
       });
   }
   private async request<T>(
-    operation: "search" | "quote",
+    operation: "search" | "quote" | "chart",
     load: () => Promise<T>,
   ): Promise<T> {
     if (!marketDataEnabled()) throw new Error("MARKET_NOT_CONFIGURED");
@@ -299,6 +300,46 @@ export class YahooFinanceProvider {
         await this.budget.block?.(new Date(this.blockedUntil));
       }
       throw new Error(code, { cause: error });
+    }
+  }
+  /** One opt-in deployment diagnostic; never saves an asset or changes the quote source. */
+  async diagnoseChart() {
+    let attempted = false;
+    try {
+      const row = await this.request("chart", async () => {
+        attempted = true;
+        const { meta } = await this.client.chart("IWDA.AS", {
+          period1: new Date(Date.now() - 7 * 86400000),
+          interval: "1d",
+          includePrePost: false,
+        });
+        const parsed = quoteSchema.safeParse({
+          ...meta,
+          quoteType: meta.instrumentType,
+          exchange: meta.exchangeName,
+        });
+        if (
+          !parsed.success ||
+          parsed.data.symbol !== "IWDA.AS" ||
+          parsed.data.currency !== "EUR" ||
+          parsed.data.quoteType !== "ETF" ||
+          parsed.data.regularMarketPrice === undefined ||
+          parsed.data.regularMarketTime === undefined
+        )
+          throw new Error("MARKET_UNAVAILABLE");
+        return parsed.data;
+      });
+      return {
+        ok: true,
+        attempted,
+        symbol: row.symbol,
+        currency: row.currency,
+        exchange: row.exchange,
+        hasPrice: true,
+        hasTimestamp: true,
+      };
+    } catch (error) {
+      return { ok: false, attempted, code: yahooError(error) };
     }
   }
   private async quotes(symbols: string[]): Promise<Quote[]> {

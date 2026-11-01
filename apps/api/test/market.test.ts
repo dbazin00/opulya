@@ -287,3 +287,44 @@ test("on-demand quotes, shared caching and valuation authorization", async (suit
     await f.close();
   }
 });
+
+test("the opt-in startup diagnostic does not delay API readiness", async (context) => {
+  const f = await marketFixture(context);
+  const { bootstrap } = await import("../src/main.js");
+  const { InstrumentProvider } = await import("../src/instruments.js");
+  type Result = Awaited<
+    ReturnType<InstanceType<typeof InstrumentProvider>["diagnoseChart"]>
+  >;
+  let finish!: (value: Result) => void;
+  const pending = new Promise<Result>((resolve) => {
+    finish = resolve;
+  });
+  const check = context.mock.method(
+    InstrumentProvider.prototype,
+    "diagnoseChart",
+    () => pending,
+  );
+  const logged = context.mock.method(console, "info", () => {});
+  process.env.MARKET_DIAGNOSTIC = "true";
+  let app: Awaited<ReturnType<typeof bootstrap>> | undefined;
+  try {
+    app = await bootstrap(0);
+    const response = await fetch((await app.getUrl()) + "/api/health");
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { status: "ok" });
+    assert.equal(check.mock.callCount(), 1);
+    assert.equal(logged.mock.callCount(), 0);
+    const result = { ok: false, attempted: true, code: "MARKET_UNAVAILABLE" };
+    finish(result);
+    await pending;
+    assert.deepEqual(logged.mock.calls[0]?.arguments, [
+      "Yahoo Finance chart diagnostic",
+      result,
+    ]);
+  } finally {
+    finish({ ok: false, attempted: false, code: "MARKET_UNAVAILABLE" });
+    process.env.MARKET_DIAGNOSTIC = "false";
+    await app?.close();
+    await f.close();
+  }
+});

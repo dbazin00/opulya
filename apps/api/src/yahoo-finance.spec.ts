@@ -41,6 +41,13 @@ function setup(quote: typeof etf & { priceHint?: number } = etf) {
       quotes: [{ symbol: quote.symbol, quoteType: quote.quoteType }],
     }),
     quote: vi.fn().mockResolvedValue([quote]),
+    chart: vi.fn().mockResolvedValue({
+      meta: {
+        ...quote,
+        instrumentType: quote.quoteType,
+        exchangeName: quote.exchange,
+      },
+    }),
   };
   const budget = { reserve: vi.fn().mockResolvedValue(undefined) };
   const provider = new YahooFinanceProvider(
@@ -460,6 +467,98 @@ describe("Yahoo prices", () => {
     expect(client.search).not.toHaveBeenCalled();
   });
 });
+describe("opt-in hosted chart diagnostic", () => {
+  it("checks chart metadata once without session-dependent quote calls or saving assets", async () => {
+    const { provider, client, budget } = setup();
+    expect(await provider.diagnoseChart()).toEqual({
+      ok: true,
+      attempted: true,
+      symbol: "IWDA.AS",
+      currency: "EUR",
+      exchange: "AMS",
+      hasPrice: true,
+      hasTimestamp: true,
+    });
+    expect(budget.reserve).toHaveBeenCalledOnce();
+    expect(client.chart).toHaveBeenCalledExactlyOnceWith("IWDA.AS", {
+      period1: new Date(now.getTime() - 7 * 86400000),
+      interval: "1d",
+      includePrePost: false,
+    });
+    expect(client.quote).not.toHaveBeenCalled();
+    expect(client.search).not.toHaveBeenCalled();
+  });
+  it.each(["MARKET_RATE_LIMIT", "MARKET_MINUTE_LIMIT", "MARKET_DAILY_LIMIT"])(
+    "does not contact Yahoo when the existing budget rejects the probe with %s",
+    async (code) => {
+      const { provider, client, budget } = setup();
+      budget.reserve.mockRejectedValue(new Error(code));
+      expect(await provider.diagnoseChart()).toEqual({
+        ok: false,
+        attempted: false,
+        code,
+      });
+      expect(client.chart).not.toHaveBeenCalled();
+    },
+  );
+  it("sanitizes failures and rejects invalid chart data", async () => {
+    const { provider, client } = setup();
+    client.chart.mockRejectedValueOnce(
+      new Error("private cookie or upstream response"),
+    );
+    expect(await provider.diagnoseChart()).toEqual({
+      ok: false,
+      attempted: true,
+      code: "MARKET_UNAVAILABLE",
+    });
+    client.chart.mockResolvedValueOnce({
+      meta: {
+        ...etf,
+        instrumentType: "ETF",
+        exchangeName: "AMS",
+        regularMarketPrice: 0,
+      },
+    });
+    expect((await provider.diagnoseChart()).ok).toBe(false);
+  });
+  it("records a chart 429, honors its retry time and makes no session request or retry", async () => {
+    const outbound = vi.fn().mockImplementation(
+      async () =>
+        new Response("Too Many Requests", {
+          status: 429,
+          headers: { "Retry-After": "600" },
+        }),
+    );
+    vi.stubGlobal("fetch", outbound);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const budget = {
+      reserve: vi.fn().mockResolvedValue(undefined),
+      block: vi.fn().mockResolvedValue(undefined),
+    };
+    const provider = new YahooFinanceProvider(budget);
+    expect(await provider.diagnoseChart()).toEqual({
+      ok: false,
+      attempted: true,
+      code: "MARKET_RATE_LIMIT",
+    });
+    expect(outbound).toHaveBeenCalledOnce();
+    expect(new URL(outbound.mock.calls[0]![0]).pathname).toBe(
+      "/v8/finance/chart/IWDA.AS",
+    );
+    expect(budget.block).toHaveBeenCalledExactlyOnceWith(
+      new Date(now.getTime() + 600000),
+    );
+    expect(console.warn).toHaveBeenCalledWith(
+      "Yahoo Finance request throttled",
+      expect.objectContaining({
+        operation: "chart",
+        endpoint: "chart",
+        status: 429,
+      }),
+    );
+  });
+});
+
 describe("bounded public metadata cache", () => {
   it("batches simultaneous current quotes, reuses them in memory, and never writes prices to PostgreSQL", async () => {
     const quote = vi.fn().mockResolvedValue([etf, coin]);
