@@ -12,6 +12,17 @@ MARKET_REQUESTS_PER_DAY=1000
 
 These are Opulya safety caps, not guaranteed Yahoo quotas. They count client operations; the client may also make cookie/session requests. Reservations and pacing are shared through PostgreSQL; throttling stops the current batch. Searches are debounced, cached for 24 hours and coalesced across instances. Public search snapshots are bounded to 500 entries, not a downloaded global catalogue.
 
+The limits cover all users and both searches and price refreshes. An uncached search typically consumes two client operations: search and a batch quote request to verify listing metadata. Continuously refreshing quotes once per minute can use the default daily allowance even with few users. Cached searches do not consume a new reservation. Changing these settings requires restarting or redeploying the API; restarting alone does not reset the PostgreSQL counters.
+
+### Diagnosing a limit
+
+- `MARKET_MINUTE_LIMIT`: Opulya's configured minute allowance is exhausted; the next UTC minute starts a new window.
+- `MARKET_DAILY_LIMIT`: Opulya's configured daily allowance is exhausted; it resets at 00:00 UTC. This is not a Yahoo-imposed daily quota.
+- `MARKET_RATE_LIMIT`: Yahoo throttled a request, or the shared 60-second provider backoff is still active.
+- `MARKET_BUSY`: the local request queue or pacing wait is full; it does not mean Yahoo returned HTTP 429.
+
+API logs distinguish `Opulya market request limit reached` (including the configured limit and reset time) from `Yahoo Finance request throttled`. These logs omit search text and user holdings. For production, inspect these events and the API service's `MARKET_REQUESTS_PER_MINUTE` and `MARKET_REQUESTS_PER_DAY` settings before changing caps. Raising an Opulya cap does not remove upstream throttling.
+
 ## Catalogue and prices
 
 There are no predefined assets. Search at least two characters, select a currency and optionally an asset type. Results are Yahoo-covered stocks, ETFs, funds and crypto, not a promise of every instrument worldwide. Only selection creates an `Instrument` and a private `Asset`; owned assets are filtered outside the shared cache.

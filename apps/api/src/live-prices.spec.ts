@@ -129,7 +129,14 @@ describe("on-demand process-local quotes", () => {
     expect((await service.getCurrentPrice(asset)).quote?.price).toBe("125");
     expect(current).toHaveBeenCalledTimes(2);
   });
-  it.each(["MARKET_RATE_LIMIT", "MARKET_UNAVAILABLE", "MARKET_AUTH_FAILED"])(
+  it.each([
+    "MARKET_RATE_LIMIT",
+    "MARKET_MINUTE_LIMIT",
+    "MARKET_DAILY_LIMIT",
+    "MARKET_BUSY",
+    "MARKET_UNAVAILABLE",
+    "MARKET_AUTH_FAILED",
+  ])(
     "keeps last good timestamps, marks stale and backs off after %s",
     async (code) => {
       const { service, current } = fixture();

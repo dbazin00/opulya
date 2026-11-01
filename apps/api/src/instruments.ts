@@ -120,6 +120,8 @@ export class MarketBudget {
     const windows = [
       {
         key: `yahoo:minute:${Math.floor(now / 60000)}`,
+        code: "MARKET_MINUTE_LIMIT",
+        resetsAt: (Math.floor(now / 60000) + 1) * 60000,
         limit: z.coerce
           .number()
           .int()
@@ -129,6 +131,8 @@ export class MarketBudget {
       },
       {
         key: `yahoo:day:${Math.floor(now / 86400000)}`,
+        code: "MARKET_DAILY_LIMIT",
+        resetsAt: (Math.floor(now / 86400000) + 1) * 86400000,
         limit: z.coerce
           .number()
           .int()
@@ -141,13 +145,20 @@ export class MarketBudget {
       try {
         await this.db.$transaction(
           async (tx) => {
-            for (const { key, limit } of windows) {
+            for (const { key, limit, code, resetsAt } of windows) {
               const row = await tx.marketQuota.upsert({
                 where: { key },
                 create: { key, count: 1 },
                 update: { count: { increment: 1 } },
               });
-              if (row.count > limit) throw new Error("MARKET_RATE_LIMIT");
+              if (row.count > limit) {
+                console.warn("Opulya market request limit reached", {
+                  code,
+                  limit,
+                  resetsAt: new Date(resetsAt).toISOString(),
+                });
+                throw new Error(code);
+              }
             }
           },
           { isolationLevel: "Serializable" },
@@ -206,7 +217,7 @@ export class MarketBudget {
       if (locked.count) return;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    throw new Error("MARKET_RATE_LIMIT");
+    throw new Error("MARKET_BUSY");
   }
 }
 

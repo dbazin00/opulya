@@ -296,12 +296,21 @@ test("Yahoo catalogue persists only selected, verified listings", async (suite) 
     await suite.test(
       "provider throttling returns a sanitized error and never persists an invalid asset",
       async () => {
-        external.search = async () => {
-          throw new Error("MARKET_RATE_LIMIT");
-        };
-        const result = await request(`instruments/directory?search=${prefix}`);
-        assert.equal(result.status, 503);
-        assert.equal(result.body.code, "MARKET_RATE_LIMIT");
+        for (const code of [
+          "MARKET_RATE_LIMIT",
+          "MARKET_MINUTE_LIMIT",
+          "MARKET_DAILY_LIMIT",
+          "MARKET_BUSY",
+        ]) {
+          external.search = async () => {
+            throw new Error(code);
+          };
+          const result = await request(
+            `instruments/directory?search=${prefix}`,
+          );
+          assert.equal(result.status, 503);
+          assert.equal(result.body.code, code);
+        }
         assert.equal(await db.asset.count({ where: { userId: users[0] } }), 1);
       },
     );

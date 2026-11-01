@@ -311,15 +311,32 @@ describe("Yahoo prices", () => {
   });
   it("backs off on throttling, sanitizes errors and does not retry blocked requests", async () => {
     const { provider, client } = setup();
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
     client.search.mockRejectedValue(new Error("Too Many Requests"));
     await expect(provider.search("IWDA")).rejects.toThrow("MARKET_RATE_LIMIT");
     await expect(provider.search("AAPL")).rejects.toThrow("MARKET_RATE_LIMIT");
     expect(client.search).toHaveBeenCalledOnce();
+    expect(warning).toHaveBeenCalledWith("Yahoo Finance request throttled", {
+      code: "MARKET_RATE_LIMIT",
+      backoffMs: 60000,
+    });
+    warning.mockRestore();
     expect(yahooError(new Error("private server details"))).toBe(
       "MARKET_UNAVAILABLE",
     );
     expect(yahooError({ status: 403 })).toBe("MARKET_AUTH_FAILED");
   });
+  it.each(["MARKET_MINUTE_LIMIT", "MARKET_DAILY_LIMIT", "MARKET_BUSY"])(
+    "does not contact or back off Yahoo when Opulya rejects a request with %s",
+    async (code) => {
+      const { provider, client, budget } = setup();
+      budget.reserve.mockRejectedValueOnce(new Error(code));
+      await expect(provider.search("IWDA")).rejects.toThrow(code);
+      expect(client.search).not.toHaveBeenCalled();
+      await expect(provider.search("IWDA")).resolves.toHaveLength(1);
+      expect(client.search).toHaveBeenCalledOnce();
+    },
+  );
   it("does not make requests when disabled", async () => {
     const { provider, client } = setup();
     vi.stubEnv("MARKET_DATA_ENABLED", "false");

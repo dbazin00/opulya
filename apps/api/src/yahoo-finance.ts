@@ -225,6 +225,10 @@ export class YahooFinanceProvider {
     } catch (error) {
       const code = yahooError(error);
       if (code === "MARKET_RATE_LIMIT") {
+        console.warn("Yahoo Finance request throttled", {
+          code,
+          backoffMs: 60000,
+        });
         this.blockedUntil = Date.now() + 60000;
         await this.budget.block?.();
       }
@@ -250,7 +254,7 @@ export class YahooFinanceProvider {
       () =>
         new Promise<Quote>((resolve, reject) => {
           if (this.quoteQueue.size >= 500) {
-            reject(new Error("MARKET_RATE_LIMIT"));
+            reject(new Error("MARKET_BUSY"));
             return;
           }
           this.quoteQueue.set(symbol, [

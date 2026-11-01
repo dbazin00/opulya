@@ -101,7 +101,7 @@ export class MarketDataService {
     const active = this.pending.get(key);
     if (active) return active;
     if (this.pending.size >= maxEntries)
-      return { quote: null, error: "MARKET_RATE_LIMIT" };
+      return { quote: null, error: "MARKET_BUSY" };
     const work = (async () => {
       let entry: Cached;
       try {
@@ -113,6 +113,9 @@ export class MarketDataService {
         const transient = [
           "MARKET_UNAVAILABLE",
           "MARKET_RATE_LIMIT",
+          "MARKET_MINUTE_LIMIT",
+          "MARKET_DAILY_LIMIT",
+          "MARKET_BUSY",
           "MARKET_AUTH_FAILED",
         ].includes(code);
         const quote =

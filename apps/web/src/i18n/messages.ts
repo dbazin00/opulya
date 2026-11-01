@@ -653,7 +653,12 @@ export const en = {
     MARKET_AUTH_FAILED:
       "The market-data provider rejected access. Please try again later.",
     MARKET_RATE_LIMIT:
-      "Market data rate limit reached. Existing prices are retained.",
+      "Yahoo Finance is temporarily limiting requests. Please try again later.",
+    MARKET_MINUTE_LIMIT:
+      "Opulya has reached its shared market-request limit for this minute. Please try again shortly.",
+    MARKET_DAILY_LIMIT:
+      "Opulya has reached its daily market-request limit. Access resets at 00:00 UTC.",
+    MARKET_BUSY: "Market requests are busy. Please try again shortly.",
     MARKET_IDENTITY_MISMATCH:
       "The provider returned a different instrument or currency.",
   },
@@ -1320,7 +1325,12 @@ export const hr: typeof en = {
     MARKET_AUTH_FAILED:
       "Pružatelj tržišnih podataka odbio je pristup. Pokušajte ponovno kasnije.",
     MARKET_RATE_LIMIT:
-      "Dosegnuto je ograničenje tržišnih podataka. Postojeće cijene su sačuvane.",
+      "Yahoo Finance trenutačno ograničava zahtjeve. Pokušajte ponovno kasnije.",
+    MARKET_MINUTE_LIMIT:
+      "Opulya je dosegnula zajedničko ograničenje tržišnih zahtjeva za ovu minutu. Pokušajte ponovno uskoro.",
+    MARKET_DAILY_LIMIT:
+      "Opulya je dosegnula dnevno ograničenje tržišnih zahtjeva. Pristup se obnavlja u 00:00 UTC.",
+    MARKET_BUSY: "Tržišni zahtjevi su zauzeti. Pokušajte ponovno uskoro.",
     MARKET_IDENTITY_MISMATCH:
       "Pružatelj je vratio drugi instrument ili valutu.",
   },

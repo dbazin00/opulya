@@ -1,7 +1,8 @@
 import "reflect-metadata";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   InstrumentProvider,
+  MarketBudget,
   InstrumentsService,
   instrumentIdentity,
   catalogueChoices,
@@ -35,6 +36,74 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe("market request limits", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-01T12:00:30Z"));
+    vi.stubEnv("MARKET_REQUESTS_PER_MINUTE", "10");
+    vi.stubEnv("MARKET_REQUESTS_PER_DAY", "100");
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  function setup(minuteCount = 1, dailyCount = 1) {
+    const marketQuota = {
+      upsert: vi.fn(async ({ where }: { where: { key: string } }) => ({
+        count: where.key.includes(":minute:") ? minuteCount : dailyCount,
+      })),
+      deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+    };
+    const db = {
+      marketQuota,
+      marketJob: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        upsert: vi.fn().mockResolvedValue({}),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      $transaction: vi.fn(
+        (work: (tx: { marketQuota: typeof marketQuota }) => Promise<void>) =>
+          work({ marketQuota }),
+      ),
+    };
+    return { db, budget: new MarketBudget(db as unknown as Database) };
+  }
+  it.each([
+    [11, 1, "MARKET_MINUTE_LIMIT", "2026-11-01T12:01:00.000Z"],
+    [1, 101, "MARKET_DAILY_LIMIT", "2026-11-02T00:00:00.000Z"],
+  ] as const)(
+    "distinguishes the exhausted allowance (%i/%i) from upstream throttling",
+    async (minute, day, code, resetsAt) => {
+      const { db, budget } = setup(minute, day);
+      await expect(budget.reserve()).rejects.toThrow(code);
+      expect(db.marketJob.updateMany).not.toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith(
+        "Opulya market request limit reached",
+        expect.objectContaining({ code, resetsAt }),
+      );
+    },
+  );
+  it("allows requests at the configured limits", async () => {
+    const { db, budget } = setup(10, 100);
+    await expect(budget.reserve()).resolves.toBeUndefined();
+    expect(db.marketQuota.upsert).toHaveBeenCalledTimes(2);
+    expect(db.marketJob.updateMany).toHaveBeenCalledOnce();
+  });
+  it("keeps shared Yahoo backoff separate from local allowances", async () => {
+    const { db, budget } = setup();
+    db.marketJob.findUnique.mockResolvedValue({
+      leaseUntil: new Date(Date.now() + 60000),
+    });
+    await expect(budget.reserve()).rejects.toThrow("MARKET_RATE_LIMIT");
+    expect(db.$transaction).not.toHaveBeenCalled();
+  });
+  it("reports pacing contention as busy rather than Yahoo throttling", async () => {
+    const { db, budget } = setup();
+    db.marketJob.updateMany.mockResolvedValue({ count: 0 });
+    const assertion = expect(budget.reserve()).rejects.toThrow("MARKET_BUSY");
+    await vi.advanceTimersByTimeAsync(10000);
+    await assertion;
+  });
 });
 describe("instrument identities and discovery", () => {
   it("uses Yahoo's platform-independent coin instead of ranking crypto trading platforms", () => {
