@@ -2,7 +2,7 @@
 
 ## Configuration
 
-Yahoo Finance is the sole external source for catalogue metadata and market prices, through the server-only `yahoo-finance2` client. No account or API key is required. There are no alternative-provider or brokerage fallbacks. Recorded purchases, quantities and fees remain the user's financial history, not values to overwrite with market quotes.
+Yahoo Finance is the sole external source for catalogue metadata and market prices, through the server-only `yahoo-finance2` client. Catalogue discovery uses `search`; listing verification and prices use `chart` metadata. These operations do not use the session-dependent `quote` endpoint or create a Yahoo cookie/crumb session. No account or API key is required. There are no alternative-provider or brokerage fallbacks. Recorded purchases, quantities and fees remain the user's financial history, not values to overwrite with market quotes.
 
 ```dotenv
 MARKET_DATA_ENABLED=true
@@ -10,9 +10,9 @@ MARKET_REQUESTS_PER_MINUTE=30
 MARKET_REQUESTS_PER_DAY=1000
 ```
 
-These are Opulya safety caps, not guaranteed Yahoo quotas. They count client operations; the client may also make cookie/session requests. Reservations and pacing are shared through PostgreSQL; throttling stops the current batch. Searches are debounced, cached for 24 hours and coalesced across instances. Public search snapshots are bounded to 500 entries, not a downloaded global catalogue.
+These are Opulya safety caps, not guaranteed Yahoo quotas. They count individual search/chart operations. Reservations and pacing are shared through PostgreSQL; throttling stops queued lookups. Searches and normalized public listing metadata are cached for 24 hours and coalesced across instances. The combined public metadata cache is bounded to 500 entries, not a downloaded global catalogue.
 
-The limits cover all users and both searches and price refreshes. An uncached search typically consumes two client operations: search and a batch quote request to verify listing metadata. Continuously refreshing quotes once per minute can use the default daily allowance even with few users. Cached searches do not consume a new reservation. Changing these settings requires restarting or redeploying the API; restarting alone does not reset the PostgreSQL counters.
+The limits cover all users and both searches and price refreshes. A cold search consumes one search operation and up to ten chart lookups to verify candidate metadata. Listings already cached by another query or currency filter need no new chart request. Chart requests are per listing, not a batch: refreshing ten distinct assets can cost ten operations per minute. Set production caps against the actual workload; continuously refreshing once per minute can exhaust the default daily allowance even with few users. Cached searches and warm quotes do not consume a new reservation. Changing these settings requires restarting or redeploying the API; restarting alone does not reset the PostgreSQL counters.
 
 ### Diagnosing a limit
 
@@ -25,23 +25,17 @@ API logs distinguish `Opulya market request limit reached` (including the config
 
 The browser sees HTTP 503 when a catalogue request is unavailable because of a market limit. This is Opulya's response, not the original Yahoo HTTP status. Use the response's `code` and the API logs above for diagnosis. A cooldown reduces repeated rejected calls; it does not guarantee Yahoo will accept the next request.
 
-### Temporary check without a hosted shell
-
-To test Yahoo's session-free chart API from the actual production runtime, temporarily set `MARKET_DIAGNOSTIC=true` in the API service environment and deploy this code. No paid shell or start-command change is needed. The API starts listening first, then makes one diagnostic attempt per process start and logs `Yahoo Finance chart diagnostic`. It uses the existing market budgets, pacing, timeout, response-size limit and shared cooldown; it never switches endpoints in response to a rejected request or retries the probe.
-
-The fixed public test symbol is `IWDA.AS`. Success reports `ok: true`, verified EUR/ETF metadata and availability of a price/timestamp, without logging the price, response body, cookies, credentials or user data. The check creates no assets, listings or transactions; ordinary quota/cooldown counters still apply. It does not change the application's existing quote source.
-
-`ok: false, attempted: false` means the provider was disabled or a budget/cooldown prevented the request. Close Opulya tabs and wait for the existing `retryAt` before running the check; an early attempt does not bypass or shorten that wait. An upstream 429 logs a separate throttling entry with `operation: 'chart'` and `endpoint: 'chart'`. A failed probe does not stop the API. Remove `MARKET_DIAGNOSTIC` after collecting the result to avoid another check on every restart. Successful chart access is evidence for a possible implementation change, not a guarantee of future access or unlimited requests.
-
 ## Catalogue and prices
 
-There are no predefined assets. Search at least two characters, select a currency and optionally an asset type. Results are Yahoo-covered stocks, ETFs, funds and crypto, not a promise of every instrument worldwide. Only selection creates an `Instrument` and a private `Asset`; owned assets are filtered outside the shared cache.
+There are no predefined assets. Search at least two characters, select a currency and optionally an asset type. New searches verify up to ten candidates; enter a more specific symbol/name to narrow a broad query. Results are Yahoo-covered stocks, ETFs, funds and crypto, not a promise of every instrument worldwide. Listings without chart data are omitted; throttling and transient failures remain errors rather than being cached as empty results. Only selection creates an `Instrument` and a private `Asset`; owned assets are filtered outside the shared cache.
 
 Exact Yahoo symbols, asset types, exchanges and currencies are verified server-side. `IWDA.AS` (Amsterdam/EUR) differs from `IWDA.L` (London/USD). Crypto uses one coin/currency pair rather than one coin per broker. GBp/GBX quotes are converted precisely to GBP; other currency conversions are not implicit.
 
 The asset picker has one catalogue search for names, symbols and ISINs, with currency and type filters. Search text is forwarded to Yahoo without broker matching or ISIN-format restrictions. Yahoo's ISIN coverage is incomplete: results can be empty or refer to a different listing. The selected listing's exchange, currency and provider metadata are shown before saving and verified server-side; searched identifiers are never copied onto an instrument as proof of identity.
 
-Prices are fetched on demand when assets, investments or dashboard valuations are viewed. Concurrent requests share a bounded, 60-second in-memory cache per API process; queued symbols are batched in groups of up to 30. Relevant visible screens refresh about once per minute and stop polling when hidden, offline or unmounted. Automatic polls do not renew idle sessions. No Redis, scheduled price jobs or persisted price history is required.
+Prices are fetched on demand when assets, investments or dashboard valuations are viewed. Concurrent requests for the same symbol share a bounded in-memory cache lasting about one minute per API process. Uncached symbols pass through one bounded queue per process and the existing shared pacing/budget controls. Listing metadata can be reused for 24 hours, while prices are refreshed independently. Relevant visible screens refresh about once per minute and stop polling when hidden, offline or unmounted. Automatic polls do not renew idle sessions. No Redis, scheduled price jobs or persisted price history is required.
+
+The displayed price and price time come from `meta.regularMarketPrice` and `meta.regularMarketTime`, not a historical candle or the fetch time. If Yahoo supplies no explicit market state, the reported regular trading window determines whether the regular session is open or closed; absent a valid window, the state stays unknown. Delay minutes remain unknown unless Yahoo reports them. The seven-day chart request only obtains the metadata; no candles or price history are stored. The temporary startup diagnostic has been removed; remove `MARKET_DIAGNOSTIC` from Render after deploying.
 
 The first request awaits the quote; subsequent refreshes retain the displayed data. Temporary failures may retain a clearly marked last-good quote for up to 24 hours, with a 60-second retry backoff. Identity mismatches and missing symbols never fall back to a different listing. Quote timestamps, reported delays and market-closed status remain visible. A fund's published NAV or a closed exchange's last trade is not a live exchange price.
 

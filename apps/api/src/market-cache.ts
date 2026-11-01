@@ -54,10 +54,9 @@ export class MarketCache {
       let locked = false;
       try {
         if (this.db) {
-          await this.db.marketJob.upsert({
-            where: { id },
-            create: { id, leaseUntil: new Date(0) },
-            update: {},
+          await this.db.marketJob.createMany({
+            data: { id, leaseUntil: new Date(0) },
+            skipDuplicates: true,
           });
           locked = !!(
             await this.db.marketJob.updateMany({
@@ -66,7 +65,8 @@ export class MarketCache {
             })
           ).count;
           if (!locked) {
-            for (let i = 0; i < 100; i++) {
+            // A cold search can verify ten paced listings before publishing its snapshot.
+            for (let i = 0; i < 300; i++) {
               await new Promise((resolve) => setTimeout(resolve, 100));
               const value = await read();
               if (value !== null) return value;

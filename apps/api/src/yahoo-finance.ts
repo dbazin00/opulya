@@ -202,6 +202,7 @@ export class YahooFinanceProvider {
     { resolve(value: Quote): void; reject(error: unknown): void }[]
   >();
   private quoteTimer?: ReturnType<typeof setTimeout>;
+  private flushingQuotes = false;
   private readonly client: InstanceType<typeof YahooFinance>;
   private blockedUntil = 0;
   constructor(
@@ -242,6 +243,12 @@ export class YahooFinanceProvider {
               yahooEndpoint(url),
             );
           }
+          if (!response.ok) {
+            await response.body?.cancel().catch(() => {});
+            throw Object.assign(new Error("Yahoo request failed"), {
+              status: response.status,
+            });
+          }
           if (!response.body) return response;
           const reader = response.body.getReader(),
             chunks: Uint8Array[] = [];
@@ -270,7 +277,7 @@ export class YahooFinanceProvider {
       });
   }
   private async request<T>(
-    operation: "search" | "quote" | "chart",
+    operation: "search" | "chart",
     load: () => Promise<T>,
   ): Promise<T> {
     if (!marketDataEnabled()) throw new Error("MARKET_NOT_CONFIGURED");
@@ -302,55 +309,34 @@ export class YahooFinanceProvider {
       throw new Error(code, { cause: error });
     }
   }
-  /** One opt-in deployment diagnostic; never saves an asset or changes the quote source. */
-  async diagnoseChart() {
-    let attempted = false;
-    try {
-      const row = await this.request("chart", async () => {
-        attempted = true;
-        const { meta } = await this.client.chart("IWDA.AS", {
-          period1: new Date(Date.now() - 7 * 86400000),
-          interval: "1d",
-          includePrePost: false,
-        });
-        const parsed = quoteSchema.safeParse({
-          ...meta,
-          quoteType: meta.instrumentType,
-          exchange: meta.exchangeName,
-        });
-        if (
-          !parsed.success ||
-          parsed.data.symbol !== "IWDA.AS" ||
-          parsed.data.currency !== "EUR" ||
-          parsed.data.quoteType !== "ETF" ||
-          parsed.data.regularMarketPrice === undefined ||
-          parsed.data.regularMarketTime === undefined
-        )
-          throw new Error("MARKET_UNAVAILABLE");
-        return parsed.data;
+  private async chart(symbol: string): Promise<Quote> {
+    return this.request("chart", async () => {
+      const { meta } = await this.client.chart(symbol, {
+        period1: new Date(Date.now() - 7 * 86400000),
+        interval: "1d",
+        includePrePost: false,
       });
-      return {
-        ok: true,
-        attempted,
-        symbol: row.symbol,
-        currency: row.currency,
-        exchange: row.exchange,
-        hasPrice: true,
-        hasTimestamp: true,
-      };
-    } catch (error) {
-      return { ok: false, attempted, code: yahooError(error) };
-    }
-  }
-  private async quotes(symbols: string[]): Promise<Quote[]> {
-    return this.request("quote", async () => {
-      const rows = await this.client.quote(symbols);
-      return rows.flatMap((value) => {
-        const parsed = quoteSchema.safeParse(value);
-        return parsed.success
-          ? [{ ...parsed.data, retrievedAt: new Date() }]
-          : [];
+      const period = z
+        .object({ start: z.date(), end: z.date() })
+        .safeParse(meta.currentTradingPeriod?.regular);
+      const marketState =
+        period.success && period.data.end > period.data.start
+          ? Date.now() >= period.data.start.getTime() &&
+            Date.now() < period.data.end.getTime()
+            ? "REGULAR"
+            : "CLOSED"
+          : undefined;
+      const parsed = quoteSchema.safeParse({
+        ...meta,
+        quoteType: meta.instrumentType,
+        exchange: meta.exchangeName,
+        marketState: meta.marketState ?? marketState,
+        retrievedAt: new Date(),
       });
+      if (!parsed.success) throw new Error("MARKET_UNAVAILABLE");
+      if (parsed.data.symbol !== symbol)
+        throw new Error("MARKET_IDENTITY_MISMATCH");
+      return parsed.data;
     });
   }
   private quote(symbol: string) {
@@ -368,30 +354,40 @@ export class YahooFinanceProvider {
             ...(this.quoteQueue.get(symbol) ?? []),
             { resolve, reject },
           ]);
-          this.quoteTimer ??= setTimeout(() => void this.flushQuotes(), 5);
+          if (!this.flushingQuotes)
+            this.quoteTimer ??= setTimeout(() => void this.flushQuotes(), 5);
         }),
     );
   }
   private async flushQuotes() {
     this.quoteTimer = undefined;
-    const entries = [...this.quoteQueue.entries()];
-    this.quoteQueue.clear();
-    for (let i = 0; i < entries.length; i += 30) {
-      const batch = entries.slice(i, i + 30);
-      try {
-        const quotes = await this.quotes(batch.map(([symbol]) => symbol));
-        for (const [symbol, callbacks] of batch) {
-          const quote = quotes.find((row) => row.symbol === symbol);
-          for (const callback of callbacks) {
-            if (quote) callback.resolve(quote);
-            else callback.reject(new Error("MARKET_SYMBOL_NOT_FOUND"));
-          }
-        }
-      } catch (error) {
-        for (const [, callbacks] of batch)
+    this.flushingQuotes = true;
+    try {
+      while (this.quoteQueue.size) {
+        const [symbol, callbacks] = this.quoteQueue.entries().next().value!;
+        this.quoteQueue.delete(symbol);
+        try {
+          const quote = await this.chart(symbol);
+          for (const callback of callbacks) callback.resolve(quote);
+        } catch (error) {
           for (const callback of callbacks) callback.reject(error);
+        }
       }
+    } finally {
+      this.flushingQuotes = false;
     }
+  }
+  private listing(symbol: string) {
+    return this.cache.get(
+      JSON.stringify(["listing", symbol]),
+      86400000,
+      rowSchema,
+      async () => {
+        const row = yahooInstrument(await this.quote(symbol));
+        if (!row) throw new Error("MARKET_SYMBOL_NOT_FOUND");
+        return row;
+      },
+    );
   }
   async search(
     search: string,
@@ -407,7 +403,7 @@ export class YahooFinanceProvider {
       async () => {
         const result = await this.request("search", () =>
           this.client.search(query, {
-            quotesCount: 30,
+            quotesCount: 10,
             newsCount: 0,
             enableFuzzyQuery: false,
           }),
@@ -430,16 +426,17 @@ export class YahooFinanceProvider {
           );
         }
         if (!symbols.size) return [];
-        const quotes = await this.quotes([...symbols].slice(0, 30));
-        for (const quote of quotes)
-          await this.quoteCache.get(
-            `quote:${quote.symbol}`,
-            55000,
-            quoteSchema,
-            async () => quote,
-          );
-        return quotes.flatMap((quote) => {
-          const row = yahooInstrument(quote);
+        const rows = await Promise.all(
+          [...symbols].slice(0, 10).map(async (symbol) => {
+            try {
+              return await this.listing(symbol);
+            } catch (error) {
+              if (yahooError(error) === "MARKET_SYMBOL_NOT_FOUND") return null;
+              throw error;
+            }
+          }),
+        );
+        return rows.flatMap((row) => {
           return row &&
             row.currency === currency &&
             (!assetType || row.assetType === assetType)
@@ -454,24 +451,14 @@ export class YahooFinanceProvider {
     currency: string,
     assetType: string,
   ): Promise<InstrumentInput> {
-    const rows = await this.cache.get(
-      JSON.stringify(["resolve", symbol, currency, assetType]),
-      86400000,
-      rowsSchema,
-      async () =>
-        [await this.quote(symbol)].flatMap((quote) => {
-          const row = yahooInstrument(quote);
-          return row ? [row] : [];
-        }),
-    );
-    const match = rows.find(
-      (row) =>
-        yahooSymbol(row) === symbol &&
-        row.currency === currency &&
-        row.assetType === assetType,
-    );
-    if (!match) throw new Error("MARKET_IDENTITY_MISMATCH");
-    return match;
+    const row = await this.listing(symbol);
+    if (
+      yahooSymbol(row) !== symbol ||
+      row.currency !== currency ||
+      row.assetType !== assetType
+    )
+      throw new Error("MARKET_IDENTITY_MISMATCH");
+    return row;
   }
   async matchLegacy(source: InstrumentInput): Promise<InstrumentInput | null> {
     if (source.assetType === "CRYPTO")

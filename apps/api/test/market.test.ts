@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { marketFixture } from "./market-fixture.js";
 import { MarketBudget } from "../src/instruments.js";
+import { MarketCache } from "../src/market-cache.js";
+import { z } from "@opulya/shared";
 
 test("on-demand quotes, shared caching and valuation authorization", async (suite) => {
   const f = await marketFixture(suite);
@@ -283,48 +286,34 @@ test("on-demand quotes, shared caching and valuation authorization", async (suit
         }
       },
     );
+    await suite.test(
+      "concurrent catalogue cache misses across instances share one load",
+      async () => {
+        const key = `chart-metadata-test:${f.prefix}`;
+        const id = `yahoo:v2:${createHash("sha256").update(key).digest("hex")}`;
+        let calls = 0;
+        const load = async () => {
+          calls++;
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          return ["public metadata fixture"];
+        };
+        try {
+          const rows = await Promise.all([
+            new MarketCache(f.db).get(key, 3600000, z.array(z.string()), load),
+            new MarketCache(f.db).get(key, 3600000, z.array(z.string()), load),
+          ]);
+          assert.deepEqual(rows, [
+            ["public metadata fixture"],
+            ["public metadata fixture"],
+          ]);
+          assert.equal(calls, 1);
+        } finally {
+          await f.db.instrumentDirectoryCache.deleteMany({ where: { id } });
+          await f.db.marketJob.deleteMany({ where: { id } });
+        }
+      },
+    );
   } finally {
-    await f.close();
-  }
-});
-
-test("the opt-in startup diagnostic does not delay API readiness", async (context) => {
-  const f = await marketFixture(context);
-  const { bootstrap } = await import("../src/main.js");
-  const { InstrumentProvider } = await import("../src/instruments.js");
-  type Result = Awaited<
-    ReturnType<InstanceType<typeof InstrumentProvider>["diagnoseChart"]>
-  >;
-  let finish!: (value: Result) => void;
-  const pending = new Promise<Result>((resolve) => {
-    finish = resolve;
-  });
-  const check = context.mock.method(
-    InstrumentProvider.prototype,
-    "diagnoseChart",
-    () => pending,
-  );
-  const logged = context.mock.method(console, "info", () => {});
-  process.env.MARKET_DIAGNOSTIC = "true";
-  let app: Awaited<ReturnType<typeof bootstrap>> | undefined;
-  try {
-    app = await bootstrap(0);
-    const response = await fetch((await app.getUrl()) + "/api/health");
-    assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), { status: "ok" });
-    assert.equal(check.mock.callCount(), 1);
-    assert.equal(logged.mock.callCount(), 0);
-    const result = { ok: false, attempted: true, code: "MARKET_UNAVAILABLE" };
-    finish(result);
-    await pending;
-    assert.deepEqual(logged.mock.calls[0]?.arguments, [
-      "Yahoo Finance chart diagnostic",
-      result,
-    ]);
-  } finally {
-    finish({ ok: false, attempted: false, code: "MARKET_UNAVAILABLE" });
-    process.env.MARKET_DIAGNOSTIC = "false";
-    await app?.close();
     await f.close();
   }
 });

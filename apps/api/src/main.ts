@@ -74,7 +74,6 @@ export async function bootstrap(port = Number(process.env.API_PORT ?? 4000)) {
   sessionPolicySchema
     .extend({
       MARKET_DATA_ENABLED: z.enum(["true", "false"]).default("true"),
-      MARKET_DIAGNOSTIC: z.enum(["true", "false"]).default("false"),
       MARKET_REQUESTS_PER_MINUTE: z.coerce
         .number()
         .int()
@@ -247,14 +246,6 @@ export async function bootstrap(port = Number(process.env.API_PORT ?? 4000)) {
   );
   app.enableShutdownHooks();
   await app.listen(port, "0.0.0.0");
-  if (process.env.MARKET_DIAGNOSTIC === "true") {
-    void app
-      .get(InstrumentProvider)
-      .diagnoseChart()
-      .then((result) => {
-        console.info("Yahoo Finance chart diagnostic", result);
-      });
-  }
   return app;
 }
 if (process.env.OPULYA_TEST !== "1") void bootstrap();

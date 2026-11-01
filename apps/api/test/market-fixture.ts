@@ -12,7 +12,6 @@ export async function marketFixture(context: TestContext) {
     NODE_ENV: "test",
     EMAIL_TRANSPORT: "test",
     MARKET_DATA_ENABLED: "true",
-    MARKET_DIAGNOSTIC: "false",
     DATABASE_URL: testDatabaseUrl(),
     WEB_ORIGIN: "http://localhost:3000",
   });
