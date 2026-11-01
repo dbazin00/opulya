@@ -61,6 +61,7 @@ export class PrivacyService {
             termsVersion: true,
             termsAcceptedAt: true,
             emailVerificationSentAt: true,
+            passwordResetSentAt: true,
             createdAt: true,
             updatedAt: true,
           },

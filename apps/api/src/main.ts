@@ -126,6 +126,38 @@ export async function bootstrap(port = Number(process.env.API_PORT ?? 4000)) {
     }),
   );
   app.use(
+    "/api/auth/forgot-password",
+    rateLimit({
+      windowMs: 3600000,
+      limit: 20,
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+      message: { code: "RATE_LIMITED" },
+    }),
+  );
+  app.use(
+    "/api/auth/forgot-password",
+    rateLimit({
+      windowMs: 3600000,
+      limit: 6,
+      keyGenerator: (req) => verificationEmailKey(req.body) ?? "invalid",
+      skip: (req) => verificationEmailKey(req.body) === null,
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+      message: { code: "RATE_LIMITED" },
+    }),
+  );
+  app.use(
+    "/api/auth/reset-password",
+    rateLimit({
+      windowMs: 900000,
+      limit: 20,
+      standardHeaders: "draft-8",
+      legacyHeaders: false,
+      message: { code: "RATE_LIMITED" },
+    }),
+  );
+  app.use(
     "/api/auth/login",
     rateLimit({
       windowMs: 15 * 60_000,

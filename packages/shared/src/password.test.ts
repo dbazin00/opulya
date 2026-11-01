@@ -5,9 +5,34 @@ import {
   signupSchema,
   verifyEmailSchema,
   termsVersion,
+  resetPasswordSchema,
+  forgotPasswordSchema,
 } from "./validation.js";
 
 describe("verification password policy", () => {
+  it("uses the same strong password policy for resets and rejects extra input", () => {
+    const token = "b".repeat(64);
+    expect(
+      resetPasswordSchema.safeParse({ token, password: "short" }).success,
+    ).toBe(false);
+    expect(
+      resetPasswordSchema.parse({ token, password: "a".repeat(15) }).token,
+    ).toBe(token);
+    expect(
+      resetPasswordSchema.safeParse({
+        token,
+        password: "a".repeat(15),
+        userId: "other",
+      }).success,
+    ).toBe(false);
+    expect(
+      forgotPasswordSchema.parse({ email: " OWNER@EXAMPLE.TEST " }).email,
+    ).toBe("owner@example.test");
+    expect(
+      forgotPasswordSchema.safeParse({ email: "owner@example.test", token })
+        .success,
+    ).toBe(false);
+  });
   it.each([0, 1, 14, 129])("rejects passwords of length %i", (length) => {
     expect(signupPasswordSchema.safeParse("a".repeat(length)).success).toBe(
       false,

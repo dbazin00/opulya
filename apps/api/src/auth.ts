@@ -26,6 +26,9 @@ import {
   verifyEmailSchema,
   termsVersion,
   registrationAllowed,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  passwordResetMinutes,
 } from "@opulya/shared";
 import { Database } from "./db.js";
 import { MailService } from "./mail.js";
@@ -65,6 +68,10 @@ export class AuthService implements OnModuleDestroy {
     if (remaining > 0)
       await new Promise((resolve) => setTimeout(resolve, remaining));
     return { ok: true };
+  }
+  private trackDelivery(delivery: Promise<void>) {
+    this.deliveries.add(delivery);
+    void delivery.finally(() => this.deliveries.delete(delivery));
   }
   private async issueVerification(user: {
     id: string;
@@ -136,8 +143,135 @@ export class AuthService implements OnModuleDestroy {
           })
           .catch(() => undefined);
       });
-    this.deliveries.add(delivery);
-    void delivery.finally(() => this.deliveries.delete(delivery));
+    this.trackDelivery(delivery);
+  }
+  async forgotPassword(body: unknown) {
+    const started = Date.now();
+    const { email } = forgotPasswordSchema.parse(body);
+    this.mail.assertReady();
+    const user = await this.db.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, firstName: true, locale: true },
+    });
+    if (user) {
+      const token = randomBytes(32).toString("hex");
+      const tokenHash = hashToken(token);
+      const now = new Date();
+      let issued = false;
+      try {
+        issued = await this.db.$transaction(async (tx) => {
+          const result = await tx.user.updateMany({
+            where: {
+              id: user.id,
+              emailVerifiedAt: { not: null },
+              passwordHash: { not: null },
+              OR: [
+                { passwordResetSentAt: null },
+                {
+                  passwordResetSentAt: { lte: new Date(now.getTime() - 60000) },
+                },
+              ],
+            },
+            data: {
+              passwordResetTokenHash: tokenHash,
+              passwordResetExpiresAt: new Date(
+                now.getTime() + passwordResetMinutes * 60000,
+              ),
+              passwordResetSentAt: now,
+            },
+          });
+          if (result.count !== 1) return false;
+          // All account mail shares the existing persistent global and recipient budgets.
+          await reserveVerificationEmail(tx, email, this.mail.settings, now);
+          return true;
+        });
+      } catch (error) {
+        if (!(error instanceof EmailBudgetExceeded)) throw error;
+      }
+      if (issued) {
+        const url = new URL("/reset-password", process.env.WEB_ORIGIN);
+        url.hash = new URLSearchParams({ token }).toString();
+        this.trackDelivery(
+          this.mail
+            .sendPasswordReset({
+              to: user.email,
+              firstName: user.firstName,
+              locale: user.locale,
+              resetUrl: url.toString(),
+              minutes: passwordResetMinutes,
+            })
+            .catch(async () => {
+              console.warn("Password reset email delivery failed");
+              await this.db.user
+                .updateMany({
+                  where: { id: user.id, passwordResetTokenHash: tokenHash },
+                  data: {
+                    passwordResetTokenHash: null,
+                    passwordResetExpiresAt: null,
+                  },
+                })
+                .catch(() => undefined);
+            }),
+        );
+      }
+    }
+    return this.respondAfter(started);
+  }
+  async resetPassword(body: unknown) {
+    const input = resetPasswordSchema.parse(body);
+    const tokenHash = hashToken(input.token);
+    const user = await this.db.user.findFirst({
+      where: {
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpiresAt: { gt: new Date() },
+        emailVerifiedAt: { not: null },
+        passwordHash: { not: null },
+      },
+      select: { id: true, email: true, firstName: true, locale: true },
+    });
+    if (!user) throw new BadRequestException("INVALID_PASSWORD_RESET");
+    const passwordHash = await argon2.hash(input.password, hashing);
+    await this.db.$transaction(async (tx) => {
+      const result = await tx.user.updateMany({
+        where: {
+          id: user.id,
+          passwordResetTokenHash: tokenHash,
+          passwordResetExpiresAt: { gt: new Date() },
+          emailVerifiedAt: { not: null },
+          passwordHash: { not: null },
+        },
+        data: {
+          passwordHash,
+          passwordResetTokenHash: null,
+          passwordResetExpiresAt: null,
+        },
+      });
+      if (result.count !== 1)
+        throw new BadRequestException("INVALID_PASSWORD_RESET");
+      await tx.session.deleteMany({ where: { userId: user.id } });
+    });
+    // Notification failure must not roll back a successful password change.
+    this.trackDelivery(
+      (async () => {
+        await this.db.$transaction((tx) =>
+          reserveVerificationEmail(
+            tx,
+            user.email,
+            this.mail.settings,
+            new Date(),
+          ),
+        );
+        await this.mail.sendPasswordChanged({
+          to: user.email,
+          firstName: user.firstName,
+          locale: user.locale,
+          loginUrl: new URL("/login", process.env.WEB_ORIGIN).toString(),
+        });
+      })().catch(() => {
+        console.warn("Password change notification unavailable");
+      }),
+    );
+    return { ok: true };
   }
   async signup(body: unknown) {
     this.assertRegistrationAllowed();
@@ -223,6 +357,7 @@ export class AuthService implements OnModuleDestroy {
     if (!user.emailVerifiedAt)
       throw new ForbiddenException("EMAIL_NOT_VERIFIED");
     return {
+      passwordHash: user.passwordHash,
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
@@ -236,18 +371,30 @@ export class AuthService implements OnModuleDestroy {
     if (!registrationAllowed(process.env))
       throw new ServiceUnavailableException("REGISTRATION_UNAVAILABLE");
   }
-  async startSession(userId: string, res: Response, previousToken?: unknown) {
+  async startSession(
+    user: { id: string; passwordHash: string },
+    res: Response,
+    previousToken?: unknown,
+  ) {
+    const userId = user.id;
     const token = randomBytes(32).toString("hex");
     const now = new Date();
     const { absoluteMs, idleMs } = sessionPolicy();
     await this.db.$transaction(async (tx) => {
       if (
-        !(await tx.user.findFirst({
-          where: { id: userId, emailVerifiedAt: { not: null } },
-          select: { id: true },
-        }))
+        (
+          await tx.user.updateMany({
+            where: {
+              id: userId,
+              emailVerifiedAt: { not: null },
+              passwordHash: user.passwordHash,
+            },
+            // Lock the credential row so a concurrent reset cannot leave an old-password session alive.
+            data: { passwordHash: user.passwordHash },
+          })
+        ).count !== 1
       )
-        throw new ForbiddenException("EMAIL_NOT_VERIFIED");
+        throw new UnauthorizedException("INVALID_CREDENTIALS");
       await tx.session.deleteMany({
         where: {
           userId,
@@ -292,13 +439,25 @@ export class AuthController {
   @Post("verify-email") verifyEmail(@Body() body: unknown) {
     return this.auth.verifyEmail(body);
   }
+  @Post("forgot-password") forgotPassword(@Body() body: unknown) {
+    return this.auth.forgotPassword(body);
+  }
+  @Post("reset-password") async resetPassword(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.auth.resetPassword(body);
+    res.clearCookie(cookieName(), sessionCookieOptions());
+    return result;
+  }
   @Post("login") async login(
     @Body() body: unknown,
     @Req() req: AuthRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const user = await this.auth.login(body);
-    await this.auth.startSession(user.id, res, req.cookies?.[cookieName()]);
+    const credentials = await this.auth.login(body);
+    await this.auth.startSession(credentials, res, req.cookies?.[cookieName()]);
+    const { passwordHash: _passwordHash, ...user } = credentials;
     return user;
   }
   @UseGuards(AuthGuard) @Get("me") me(@Req() req: AuthRequest) {

@@ -31,6 +31,15 @@ export type VerificationMail = {
   verificationUrl: string;
   minutes: number;
 };
+export type PasswordResetMail = Omit<VerificationMail, "verificationUrl"> & {
+  resetUrl: string;
+};
+type PasswordChangedMail = Omit<
+  VerificationMail,
+  "verificationUrl" | "minutes"
+> & {
+  loginUrl: string;
+};
 const logoContentId = "opulya-logo";
 const labels = {
   en: {
@@ -59,6 +68,50 @@ const labels = {
       "Ako niste zatražili Opulya račun ili potvrdu, zanemarite ovu poruku. Vaš račun neće biti aktiviran.",
   },
 };
+const resetLabels = {
+  en: {
+    ...labels.en,
+    subject: "Reset your Opulya password",
+    title: "Reset your password",
+    body: "Use the link below to choose a new password for your Opulya account.",
+    action: "Reset password",
+    preview: "A password reset was requested for your Opulya account.",
+    ignore:
+      "If you did not request this, ignore this email. Your password has not changed.",
+  },
+  hr: {
+    ...labels.hr,
+    subject: "Ponovno postavite Opulya lozinku",
+    title: "Ponovno postavite lozinku",
+    body: "Otvorite poveznicu kako biste odabrali novu lozinku za svoj Opulya račun.",
+    action: "Postavi novu lozinku",
+    preview: "Zatraženo je ponovno postavljanje lozinke za vaš Opulya račun.",
+    ignore:
+      "Ako to niste zatražili, zanemarite ovu poruku. Vaša lozinka nije promijenjena.",
+  },
+};
+const changedLabels = {
+  en: {
+    ...labels.en,
+    subject: "Your Opulya password was changed",
+    title: "Password changed",
+    body: "Your password was reset and all existing sessions were signed out. Sign in with your new password.",
+    action: "Sign in",
+    preview: "Your Opulya password has been changed.",
+    ignore:
+      "If you did not make this change, request another password reset immediately and secure your email account.",
+  },
+  hr: {
+    ...labels.hr,
+    subject: "Vaša Opulya lozinka je promijenjena",
+    title: "Lozinka je promijenjena",
+    body: "Vaša lozinka je ponovno postavljena i sve postojeće sesije su odjavljene. Prijavite se novom lozinkom.",
+    action: "Prijavite se",
+    preview: "Vaša Opulya lozinka je promijenjena.",
+    ignore:
+      "Ako niste napravili ovu promjenu, odmah zatražite novu lozinku i zaštitite svoj račun e-pošte.",
+  },
+};
 const escapeHtml = (value: string) =>
   value.replace(
     /[&<>"']/g,
@@ -69,12 +122,38 @@ const escapeHtml = (value: string) =>
   );
 export function verificationMessage(mail: VerificationMail) {
   const text = mail.locale === "hr" ? labels.hr : labels.en;
-  const expiry = text.expiry.replace("{minutes}", String(mail.minutes));
-  const verificationUrl = new URL(mail.verificationUrl);
-  const link = escapeHtml(verificationUrl.toString());
+  return accountMessage(mail, text, mail.verificationUrl, mail.minutes);
+}
+export function passwordResetMessage(mail: PasswordResetMail) {
+  return accountMessage(
+    mail,
+    mail.locale === "hr" ? resetLabels.hr : resetLabels.en,
+    mail.resetUrl,
+    mail.minutes,
+  );
+}
+export function passwordChangedMessage(mail: PasswordChangedMail) {
+  return accountMessage(
+    mail,
+    mail.locale === "hr" ? changedLabels.hr : changedLabels.en,
+    mail.loginUrl,
+  );
+}
+function accountMessage(
+  mail: Pick<VerificationMail, "to" | "firstName" | "locale">,
+  text: typeof labels.en,
+  url: string,
+  minutes?: number,
+) {
+  const expiry =
+    minutes === undefined
+      ? ""
+      : text.expiry.replace("{minutes}", String(minutes));
+  const messageUrl = new URL(url);
+  const link = escapeHtml(messageUrl.toString());
   return {
     subject: text.subject,
-    text: `Opulya\n\n${text.hello} ${mail.firstName},\n\n${text.body}\n\n${text.action}:\n${verificationUrl.toString()}\n\n${expiry}\n\n${text.ignore}\n\n${text.tagline}`,
+    text: `Opulya\n\n${text.hello} ${mail.firstName},\n\n${text.body}\n\n${text.action}:\n${messageUrl.toString()}\n\n${expiry}\n\n${text.ignore}\n\n${text.tagline}`,
     // Presentation tables and inline styles keep the layout usable in mail clients without app CSS.
     html: `<!doctype html>
 <html lang="${mail.locale === "hr" ? "hr" : "en"}">
@@ -107,7 +186,7 @@ export function verificationMessage(mail: VerificationMail) {
               <a href="${link}" style="display:inline-block;padding:14px 24px;border:1px solid #075c49;border-radius:6px;color:#ffffff;background-color:#075c49;font-size:16px;line-height:22px;font-weight:700;text-align:center;text-decoration:none;">${text.action}</a>
             </td></tr>
           </table>
-          <p style="margin:0;font-size:14px;line-height:22px;color:#5b6d66;">${expiry}</p>
+          ${expiry ? `<p style="margin:0;font-size:14px;line-height:22px;color:#5b6d66;">${expiry}</p>` : ""}
         </td></tr>
         <tr><td style="padding:20px 24px;border-top:1px solid #e8edea;">
           <p style="margin:0;font-size:12px;line-height:20px;color:#5b6d66;">${text.ignore}</p>
@@ -125,6 +204,7 @@ export function verificationMessage(mail: VerificationMail) {
 export class MailService {
   readonly settings = mailSettingsSchema.parse(process.env);
   private readonly outbox = new Map<string, VerificationMail>();
+  private readonly resetOutbox = new Map<string, PasswordResetMail>();
   constructor() {
     if (
       this.settings.EMAIL_TRANSPORT === "test" &&
@@ -150,9 +230,31 @@ export class MailService {
   }
   async sendVerification(mail: VerificationMail) {
     this.assertReady();
-    const message = verificationMessage(mail);
-    if (this.settings.EMAIL_TRANSPORT === "test") {
+    if (this.settings.EMAIL_TRANSPORT === "test")
       this.outbox.set(mail.to, mail);
+    return this.send(mail, verificationMessage(mail));
+  }
+  testPasswordResetMail(email: string) {
+    if (this.settings.EMAIL_TRANSPORT !== "test")
+      throw new Error("Test mailbox unavailable");
+    return this.resetOutbox.get(email.trim().toLowerCase());
+  }
+  async sendPasswordReset(mail: PasswordResetMail) {
+    this.assertReady();
+    if (this.settings.EMAIL_TRANSPORT === "test")
+      this.resetOutbox.set(mail.to, mail);
+    return this.send(mail, passwordResetMessage(mail), "password-reset-");
+  }
+  async sendPasswordChanged(mail: PasswordChangedMail) {
+    return this.send(mail, passwordChangedMessage(mail), "password-changed-");
+  }
+  private async send(
+    mail: VerificationMail | PasswordResetMail | PasswordChangedMail,
+    message: ReturnType<typeof verificationMessage>,
+    prefix = "",
+  ) {
+    this.assertReady();
+    if (this.settings.EMAIL_TRANSPORT === "test") {
       if (this.settings.EMAIL_TEST_OUTBOX_DIR) {
         await mkdir(this.settings.EMAIL_TEST_OUTBOX_DIR, {
           recursive: true,
@@ -160,7 +262,7 @@ export class MailService {
         });
         const name = createHash("sha256").update(mail.to).digest("hex");
         await writeFile(
-          join(this.settings.EMAIL_TEST_OUTBOX_DIR, `${name}.json`),
+          join(this.settings.EMAIL_TEST_OUTBOX_DIR, `${prefix}${name}.json`),
           JSON.stringify(mail),
           { mode: 0o600 },
         );

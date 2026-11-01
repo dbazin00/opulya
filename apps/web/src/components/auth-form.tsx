@@ -1,5 +1,12 @@
 "use client";
-import { useEffect, useId, useRef, useState, type SubmitEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ComponentProps,
+  type SubmitEvent,
+} from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -27,30 +34,128 @@ import {
 } from "@/lib/pending-verification";
 import { Button, ErrorNotice, Field, Loading } from "./ui";
 import { AuthShell } from "./auth-shell";
+function PasswordInput({
+  repeat = false,
+  ...props
+}: ComponentProps<"input"> & { repeat?: boolean }) {
+  const t = useTranslations();
+  const [visible, setVisible] = useState(false);
+  const label = t(
+    repeat
+      ? visible
+        ? "auth.hideRepeatPassword"
+        : "auth.showRepeatPassword"
+      : visible
+        ? "auth.hidePassword"
+        : "auth.showPassword",
+  );
+  return (
+    <div className="password-input">
+      <input
+        {...props}
+        type={visible ? "text" : "password"}
+        aria-description={t("auth.passwordVisibilityShortcut")}
+        aria-keyshortcuts="Alt+V"
+        onKeyDown={(event) => {
+          if (
+            event.altKey &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            event.code === "KeyV"
+          ) {
+            event.preventDefault();
+            setVisible((current) => !current);
+          }
+        }}
+      />
+      <button
+        type="button"
+        className="icon-button"
+        tabIndex={-1}
+        aria-keyshortcuts="Alt+V"
+        aria-label={label}
+        title={`${label} (Alt+V)`}
+        aria-pressed={visible}
+        aria-controls={props.id}
+        onClick={() => setVisible((current) => !current)}
+      >
+        {visible ? (
+          <EyeOff size={18} aria-hidden="true" />
+        ) : (
+          <Eye size={18} aria-hidden="true" />
+        )}
+      </button>
+    </div>
+  );
+}
 export function AuthForm({
   signup,
   verify = false,
   pending = false,
   legalDraft = false,
   registrationClosed = false,
+  recovery,
 }: {
   signup: boolean;
   verify?: boolean;
   pending?: boolean;
   legalDraft?: boolean;
   registrationClosed?: boolean;
+  recovery?: "forgot" | "reset";
 }) {
   const t = useTranslations();
   const locale = useLocale();
+  const reset = recovery === "reset";
+  const forgot = recovery === "forgot";
+  const newPassword = verify || reset;
+  const mode =
+    recovery ??
+    (verify ? "verify" : pending ? "pending" : signup ? "signup" : "login");
+  const copy = {
+    login: {
+      endpoint: "login",
+      title: "auth.login",
+      body: "auth.loginSubtitle",
+      action: "auth.signIn",
+    },
+    signup: {
+      endpoint: "signup",
+      title: "auth.signup",
+      body: "auth.signupSubtitle",
+      action: "auth.createAccount",
+    },
+    verify: {
+      endpoint: "verify-email",
+      title: "auth.verifyEmail",
+      body: "auth.verifyEmailBody",
+      action: "auth.verifyEmail",
+    },
+    pending: {
+      endpoint: "resend-verification",
+      title: "auth.checkEmail",
+      body: "auth.checkEmailBody",
+      action: "auth.resendVerification",
+    },
+    forgot: {
+      endpoint: "forgot-password",
+      title: "auth.forgotPassword",
+      body: "auth.forgotPasswordBody",
+      action: "auth.sendResetLink",
+    },
+    reset: {
+      endpoint: "reset-password",
+      title: "auth.resetPassword",
+      body: "auth.resetPasswordBody",
+      action: "auth.resetPassword",
+    },
+  }[mode];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  const [repeatVisible, setRepeatVisible] = useState(false);
   const [token, setToken] = useState("");
-  const [tokenLoaded, setTokenLoaded] = useState(!verify);
-  const [verified, setVerified] = useState(false);
+  const [tokenLoaded, setTokenLoaded] = useState(!newPassword);
+  const [complete, setComplete] = useState(false);
   const [resent, setResent] = useState(false);
   const [email, setEmail] = useState("");
   const [emailLocked, setEmailLocked] = useState(false);
@@ -58,7 +163,6 @@ export function AuthForm({
   const [nextRequestAt, setNextRequestAt] = useState(0);
   const [remaining, setRemaining] = useState(0);
   const tokenInitialized = useRef(false);
-  const newPassword = verify;
   const repeatInput = useRef<HTMLInputElement>(null);
   const rulesId = useId();
   const termsId = useId();
@@ -96,23 +200,29 @@ export function AuthForm({
     setPendingLoaded(true);
   }, [pending]);
   useEffect(() => {
-    if (!pending || !nextRequestAt) return;
+    if ((!pending && !forgot) || !nextRequestAt) return;
     const update = () =>
       setRemaining(Math.max(0, Math.ceil((nextRequestAt - Date.now()) / 1000)));
     update();
     const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
-  }, [pending, nextRequestAt]);
+  }, [pending, forgot, nextRequestAt]);
   useEffect(() => {
-    if (!verify || tokenInitialized.current) return;
+    if (!newPassword || tokenInitialized.current) return;
     tokenInitialized.current = true;
     const value =
       new URLSearchParams(window.location.hash.slice(1)).get("token") ?? "";
     window.history.replaceState(null, "", window.location.pathname);
     if (/^[a-f0-9]{64}$/.test(value)) setToken(value);
-    else setError(new ApiError("INVALID_VERIFICATION", 400));
+    else
+      setError(
+        new ApiError(
+          reset ? "INVALID_PASSWORD_RESET" : "INVALID_VERIFICATION",
+          400,
+        ),
+      );
     setTokenLoaded(true);
-  }, [verify]);
+  }, [newPassword, reset]);
   useEffect(() => {
     repeatInput.current?.setCustomValidity(
       repeatPassword && !matchMet ? t("auth.passwordsMismatch") : "",
@@ -120,7 +230,8 @@ export function AuthForm({
   }, [repeatPassword, matchMet, t]);
   async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending && (!pendingLoaded || remaining > 0)) return;
+    if (busy || (newPassword && !token)) return;
+    if ((pending || forgot) && (!pendingLoaded || remaining > 0)) return;
     if (signup && registrationClosed) return;
     const form = event.currentTarget;
     if (signup && !acceptTerms) {
@@ -137,29 +248,34 @@ export function AuthForm({
       form.reportValidity();
       return;
     }
-    // Password confirmation stays in the browser, not in the verification API body.
+    // Password confirmation stays in the browser, not in the API body.
     delete data.repeatPassword;
     setBusy(true);
     setError(null);
     try {
-      await api(
-        `auth/${verify ? "verify-email" : pending ? "resend-verification" : signup ? "signup" : "login"}`,
-        {
-          ...data,
-          ...(verify ? { token } : {}),
-          ...(signup
-            ? {
-                locale,
-                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                acceptTerms,
-                termsVersion,
-              }
-            : {}),
-        },
-      );
-      if (verify) {
-        forgetVerification();
-        setVerified(true);
+      await api(`auth/${copy.endpoint}`, {
+        ...data,
+        ...(newPassword ? { token } : {}),
+        ...(signup
+          ? {
+              locale,
+              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              acceptTerms,
+              termsVersion,
+            }
+          : {}),
+      });
+      if (newPassword) {
+        if (verify) forgetVerification();
+        setToken("");
+        setPassword("");
+        setRepeatPassword("");
+        setComplete(true);
+        setBusy(false);
+      } else if (forgot) {
+        setNextRequestAt(Date.now() + 60000);
+        setRemaining(60);
+        setResent(true);
         setBusy(false);
       } else if (pending) {
         const saved = rememberVerification(String(data.email));
@@ -175,9 +291,7 @@ export function AuthForm({
       }
     } catch (e) {
       if (
-        !signup &&
-        !verify &&
-        !pending &&
+        mode === "login" &&
         e instanceof ApiError &&
         e.code === "EMAIL_NOT_VERIFIED"
       ) {
@@ -192,7 +306,7 @@ export function AuthForm({
   return (
     <AuthShell
       onBeforeLocaleChange={() => {
-        if (verify && token)
+        if (newPassword && token)
           window.history.replaceState(
             null,
             "",
@@ -200,25 +314,12 @@ export function AuthForm({
           );
       }}
     >
-      <section
-        className="auth-form"
-        key={
-          verified
-            ? "verified"
-            : verify
-              ? "verify"
-              : pending
-                ? "pending"
-                : signup
-                  ? "signup"
-                  : "login"
-        }
-      >
+      <section className="auth-form" key={complete ? "complete" : mode}>
         <div className="auth-intro">
           <span className="auth-form-symbol" aria-hidden="true">
-            {verified ? (
+            {complete ? (
               <CheckCircle2 size={23} />
-            ) : verify || pending ? (
+            ) : verify || pending || forgot ? (
               <MailCheck size={23} />
             ) : signup ? (
               <UserRound size={23} />
@@ -228,34 +329,26 @@ export function AuthForm({
           </span>
           <h1>
             {t(
-              verified
-                ? "auth.emailVerified"
-                : verify
-                  ? "auth.verifyEmail"
-                  : pending
-                    ? "auth.checkEmail"
-                    : signup
-                      ? "auth.signup"
-                      : "auth.login",
+              complete
+                ? reset
+                  ? "auth.passwordResetDone"
+                  : "auth.emailVerified"
+                : copy.title,
             )}
           </h1>
           <p className="muted">
             {t(
-              verified
-                ? "auth.emailVerifiedBody"
-                : verify
-                  ? "auth.verifyEmailBody"
-                  : pending
-                    ? "auth.checkEmailBody"
-                    : signup
-                      ? "auth.signupSubtitle"
-                      : "auth.loginSubtitle",
+              complete
+                ? reset
+                  ? "auth.passwordResetDoneBody"
+                  : "auth.emailVerifiedBody"
+                : copy.body,
             )}
           </p>
         </div>
-        {(verify && !tokenLoaded) || (pending && !pendingLoaded) ? (
+        {(newPassword && !tokenLoaded) || (pending && !pendingLoaded) ? (
           <Loading />
-        ) : verified ? (
+        ) : complete ? (
           <Link href="/login" className="button full">
             {t("auth.loginLink")}
             <ArrowRight size={17} />
@@ -288,7 +381,7 @@ export function AuthForm({
                 </Field>
               </div>
             )}
-            {!verify && (
+            {!newPassword && (
               <Field label={t("auth.email")}>
                 {(id) => (
                   <input
@@ -305,47 +398,21 @@ export function AuthForm({
                 )}
               </Field>
             )}
-            {!pending && !signup && (
+            {!pending && !signup && !forgot && (
               <Field label={t("auth.password")}>
                 {(id) => (
-                  <div className="password-input">
-                    <input
-                      id={id}
-                      name="password"
-                      type={passwordVisible ? "text" : "password"}
-                      autoComplete={
-                        newPassword ? "new-password" : "current-password"
-                      }
-                      required
-                      minLength={newPassword ? passwordMinLength : 1}
-                      maxLength={passwordMaxLength}
-                      aria-describedby={newPassword ? rulesId : undefined}
-                      onChange={(event) => setPassword(event.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className="icon-button"
-                      aria-label={t(
-                        passwordVisible
-                          ? "auth.hidePassword"
-                          : "auth.showPassword",
-                      )}
-                      title={t(
-                        passwordVisible
-                          ? "auth.hidePassword"
-                          : "auth.showPassword",
-                      )}
-                      aria-pressed={passwordVisible}
-                      aria-controls={id}
-                      onClick={() => setPasswordVisible(!passwordVisible)}
-                    >
-                      {passwordVisible ? (
-                        <EyeOff size={18} aria-hidden="true" />
-                      ) : (
-                        <Eye size={18} aria-hidden="true" />
-                      )}
-                    </button>
-                  </div>
+                  <PasswordInput
+                    id={id}
+                    name="password"
+                    autoComplete={
+                      newPassword ? "new-password" : "current-password"
+                    }
+                    required
+                    minLength={newPassword ? passwordMinLength : 1}
+                    maxLength={passwordMaxLength}
+                    aria-describedby={newPassword ? rulesId : undefined}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
                 )}
               </Field>
             )}
@@ -353,45 +420,20 @@ export function AuthForm({
               <>
                 <Field label={t("auth.repeatPassword")}>
                   {(id) => (
-                    <div className="password-input">
-                      <input
-                        ref={repeatInput}
-                        id={id}
-                        name="repeatPassword"
-                        type={repeatVisible ? "text" : "password"}
-                        autoComplete="new-password"
-                        required
-                        maxLength={passwordMaxLength}
-                        aria-describedby={rulesId}
-                        aria-invalid={repeatPassword.length > 0 && !matchMet}
-                        onChange={(event) =>
-                          setRepeatPassword(event.target.value)
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="icon-button"
-                        aria-label={t(
-                          repeatVisible
-                            ? "auth.hideRepeatPassword"
-                            : "auth.showRepeatPassword",
-                        )}
-                        title={t(
-                          repeatVisible
-                            ? "auth.hideRepeatPassword"
-                            : "auth.showRepeatPassword",
-                        )}
-                        aria-pressed={repeatVisible}
-                        aria-controls={id}
-                        onClick={() => setRepeatVisible(!repeatVisible)}
-                      >
-                        {repeatVisible ? (
-                          <EyeOff size={18} aria-hidden="true" />
-                        ) : (
-                          <Eye size={18} aria-hidden="true" />
-                        )}
-                      </button>
-                    </div>
+                    <PasswordInput
+                      repeat
+                      ref={repeatInput}
+                      id={id}
+                      name="repeatPassword"
+                      autoComplete="new-password"
+                      required
+                      maxLength={passwordMaxLength}
+                      aria-describedby={rulesId}
+                      aria-invalid={repeatPassword.length > 0 && !matchMet}
+                      onChange={(event) =>
+                        setRepeatPassword(event.target.value)
+                      }
+                    />
                   )}
                 </Field>
                 <div id={rulesId} className="password-requirements">
@@ -419,6 +461,11 @@ export function AuthForm({
                   })}
                 </span>
               </>
+            )}
+            {mode === "login" && (
+              <Link href="/forgot-password" className="auth-recovery-link">
+                {t("auth.forgotPasswordLink")}
+              </Link>
             )}
             <ErrorNotice error={error} />
             {signup && (
@@ -495,7 +542,11 @@ export function AuthForm({
             )}
             {resent && (
               <p className="notice" role="status">
-                {t("auth.verificationRequested")}
+                {t(
+                  forgot
+                    ? "auth.passwordResetRequested"
+                    : "auth.verificationRequested",
+                )}
               </p>
             )}
             <Button
@@ -504,23 +555,15 @@ export function AuthForm({
               className="full"
               disabled={
                 (newPassword && (!lengthMet || !matchMet)) ||
-                (verify && !token) ||
-                (pending && remaining > 0) ||
+                (newPassword && !token) ||
+                ((pending || forgot) && remaining > 0) ||
                 (signup && (!acceptTerms || registrationClosed))
               }
             >
-              {t(
-                verify
-                  ? "auth.verifyEmail"
-                  : pending
-                    ? "auth.resendVerification"
-                    : signup
-                      ? "auth.createAccount"
-                      : "auth.signIn",
-              )}
+              {t(copy.action)}
               <ArrowRight size={17} />
             </Button>
-            {pending && remaining > 0 && (
+            {(pending || forgot) && remaining > 0 && (
               <p className="muted">
                 {t("auth.resendCountdown", { seconds: remaining })}
               </p>
@@ -534,12 +577,19 @@ export function AuthForm({
             </Link>
           </p>
         )}
-        {verify && !verified && (
+        {verify && !complete && (
           <p className="auth-switch">
             <Link href="/check-email">{t("auth.resendVerification")}</Link>
           </p>
         )}
-        {!pending && !verify && (
+        {recovery && !complete && (
+          <p className="auth-switch">
+            <Link href={reset ? "/forgot-password" : "/login"}>
+              {t(reset ? "auth.requestNewResetLink" : "auth.backToLogin")}
+            </Link>
+          </p>
+        )}
+        {!pending && !verify && !recovery && (
           <p className="auth-switch">
             {t(signup ? "auth.hasAccount" : "auth.noAccount")}{" "}
             <Link href={signup ? "/login" : "/signup"}>

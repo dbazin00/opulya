@@ -79,7 +79,7 @@ describe("session security", () => {
     const create = vi.fn(),
       cookie = vi.fn();
     const tx = {
-      user: { findFirst: vi.fn().mockResolvedValue(null) },
+      user: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
       session: { create },
     };
     const db = {
@@ -87,10 +87,13 @@ describe("session security", () => {
         action(tx),
     } as unknown as Database;
     await expect(
-      new AuthService(db, {} as MailService).startSession("pending", {
-        cookie,
-      } as unknown as Response),
-    ).rejects.toThrow("EMAIL_NOT_VERIFIED");
+      new AuthService(db, {} as MailService).startSession(
+        { id: "pending", passwordHash: "hash" },
+        {
+          cookie,
+        } as unknown as Response,
+      ),
+    ).rejects.toThrow("INVALID_CREDENTIALS");
     expect(create).not.toHaveBeenCalled();
     expect(cookie).not.toHaveBeenCalled();
   });
@@ -170,7 +173,7 @@ describe("session security", () => {
     vi.stubEnv("SESSION_HOURS", "8");
     vi.stubEnv("SESSION_IDLE_MINUTES", "15");
     const tx = {
-      user: { findFirst: vi.fn().mockResolvedValue({ id: "user-a" }) },
+      user: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
       session: {
         deleteMany: vi.fn().mockResolvedValue({ count: 1 }),
         create: vi.fn().mockResolvedValue({}),
@@ -184,11 +187,19 @@ describe("session security", () => {
     const service = new AuthService(db, {} as MailService);
     const previous = "a".repeat(64);
     await service.startSession(
-      "user-a",
+      { id: "user-a", passwordHash: "verified-password-hash" },
       { cookie } as unknown as Response,
       previous,
     );
     expect(transaction).toHaveBeenCalledOnce();
+    expect(tx.user.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "user-a",
+        emailVerifiedAt: { not: null },
+        passwordHash: "verified-password-hash",
+      },
+      data: { passwordHash: "verified-password-hash" },
+    });
     expect(cookie).toHaveBeenCalledOnce();
     const [call] = cookie.mock.calls;
     if (!call) throw new Error("Expected a session cookie");
@@ -231,9 +242,12 @@ describe("session security", () => {
     } as unknown as Database;
     const cookie = vi.fn();
     await expect(
-      new AuthService(db, {} as MailService).startSession("user", {
-        cookie,
-      } as unknown as Response),
+      new AuthService(db, {} as MailService).startSession(
+        { id: "user", passwordHash: "hash" },
+        {
+          cookie,
+        } as unknown as Response,
+      ),
     ).rejects.toThrow("database unavailable");
     expect(cookie).not.toHaveBeenCalled();
   });

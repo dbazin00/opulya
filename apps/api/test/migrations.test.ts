@@ -74,6 +74,7 @@ test("migrations create the final schema on an empty database", async (suite) =>
             "20261022120000_terms_acceptance",
             "20261024120000_investment_budgets",
             "20261024130000_privacy_controls",
+            "20261101120000_password_reset",
           ],
         );
         for (const table of [

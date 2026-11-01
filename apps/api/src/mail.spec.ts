@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MailService, verificationMessage } from "./mail.js";
+import {
+  MailService,
+  verificationMessage,
+  passwordResetMessage,
+  passwordChangedMessage,
+} from "./mail.js";
 const message = {
   to: "owner@example.test",
   firstName: '<img src=x onerror="alert(1)">',
@@ -12,6 +17,40 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 describe("verification email transport", () => {
+  it("renders distinct localized reset and password-change emails without credentials", async () => {
+    const reset = {
+      to: message.to,
+      firstName: message.firstName,
+      locale: "hr",
+      resetUrl: "https://app.example.test/reset-password#token=abc",
+      minutes: 30,
+    };
+    const rendered = passwordResetMessage(reset);
+    expect(rendered.subject).toBe("Ponovno postavite Opulya lozinku");
+    expect(rendered.html).toContain("30 minuta");
+    expect(rendered.html).toContain("&lt;img");
+    expect(rendered.text).toContain(reset.resetUrl);
+    expect(rendered.text).not.toContain("Verify email");
+    const changed = passwordChangedMessage({
+      to: message.to,
+      firstName: "Owner",
+      locale: "en",
+      loginUrl: "https://app.example.test/login",
+    });
+    expect(changed.subject).toBe("Your Opulya password was changed");
+    expect(changed.html).not.toContain("expires");
+    expect(changed.html).not.toContain("token=");
+    vi.stubEnv("EMAIL_TRANSPORT", "test");
+    vi.stubEnv("NODE_ENV", "test");
+    vi.stubEnv(
+      "DATABASE_URL",
+      "postgresql://local:local@localhost/opulya_test",
+    );
+    const mail = new MailService();
+    await mail.sendPasswordReset(reset);
+    expect(mail.testPasswordResetMail(message.to)).toEqual(reset);
+    expect(mail.testMail(message.to)).toBeUndefined();
+  });
   it("escapes user names, localizes mail, and does not include a password", () => {
     const rendered = verificationMessage(message);
     expect(rendered.html).toContain("&lt;img");

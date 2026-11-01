@@ -170,12 +170,27 @@ export const en = {
     signupVerificationHint:
       "We will email you a link to verify your address and choose your password.",
     showPassword: "Show password",
+    passwordVisibilityShortcut: "Press Alt+V to show or hide this password.",
     hidePassword: "Hide password",
     showRepeatPassword: "Show repeated password",
     hideRepeatPassword: "Hide repeated password",
     login: "Welcome back",
     signup: "Make room for clarity",
     loginSubtitle: "Sign in to your Opulya account.",
+    forgotPasswordLink: "Forgot password?",
+    forgotPassword: "Forgot your password?",
+    forgotPasswordBody:
+      "Enter your email address to request a password reset link.",
+    sendResetLink: "Send reset link",
+    passwordResetRequested:
+      "If this address belongs to a verified account, a password reset link will be sent. Check your spam folder and wait at least one minute before requesting again.",
+    resetPassword: "Reset password",
+    resetPasswordBody: "Choose and confirm your new password.",
+    passwordResetDone: "Password reset",
+    passwordResetDoneBody:
+      "Your password has been changed and all existing sessions have been signed out. Sign in with your new password.",
+    requestNewResetLink: "Request a new reset link",
+    backToLogin: "Back to sign in",
     signupSubtitle: "Create your personal finance account.",
     email: "Email address",
     password: "Password",
@@ -620,8 +635,10 @@ export const en = {
     EMAIL_NOT_VERIFIED: "Verify your email address before signing in.",
     INVALID_VERIFICATION:
       "This verification link is invalid, expired or already used. Request a new link.",
+    INVALID_PASSWORD_RESET:
+      "This reset link is invalid, expired or already used. Request a new link.",
     MAIL_NOT_CONFIGURED:
-      "Email verification is temporarily unavailable. Please try again later.",
+      "Email delivery is temporarily unavailable. Please try again later.",
     EMAIL_DELIVERY_FAILED:
       "Email delivery is temporarily unavailable. Please try again later.",
     MARKET_UNAVAILABLE: "Market data is temporarily unavailable.",
@@ -814,12 +831,28 @@ export const hr: typeof en = {
     signupVerificationHint:
       "Poslat ćemo vam poveznicu za potvrdu adrese i odabir lozinke.",
     showPassword: "Prikaži lozinku",
+    passwordVisibilityShortcut:
+      "Pritisnite Alt+V za prikaz ili skrivanje ove lozinke.",
     hidePassword: "Sakrij lozinku",
     showRepeatPassword: "Prikaži ponovljenu lozinku",
     hideRepeatPassword: "Sakrij ponovljenu lozinku",
     login: "Dobro došli natrag",
     signup: "Vrijeme je za jasniju sliku",
     loginSubtitle: "Prijavite se na svoj Opulya račun.",
+    forgotPasswordLink: "Zaboravljena lozinka?",
+    forgotPassword: "Zaboravili ste lozinku?",
+    forgotPasswordBody:
+      "Unesite adresu e-pošte za poveznicu za ponovno postavljanje lozinke.",
+    sendResetLink: "Pošalji poveznicu",
+    passwordResetRequested:
+      "Ako ova adresa pripada potvrđenom računu, poslat ćemo poveznicu za ponovno postavljanje lozinke. Provjerite neželjenu poštu i pričekajte barem jednu minutu prije novog zahtjeva.",
+    resetPassword: "Postavi novu lozinku",
+    resetPasswordBody: "Odaberite i potvrdite novu lozinku.",
+    passwordResetDone: "Lozinka je promijenjena",
+    passwordResetDoneBody:
+      "Vaša lozinka je promijenjena i sve postojeće sesije su odjavljene. Prijavite se novom lozinkom.",
+    requestNewResetLink: "Zatražite novu poveznicu",
+    backToLogin: "Natrag na prijavu",
     signupSubtitle: "Izradite svoj račun za osobne financije.",
     email: "Adresa e-pošte",
     password: "Lozinka",
@@ -1268,8 +1301,10 @@ export const hr: typeof en = {
     EMAIL_NOT_VERIFIED: "Potvrdite e-mail adresu prije prijave.",
     INVALID_VERIFICATION:
       "Poveznica za potvrdu nije valjana, istekla je ili je već korištena. Zatražite novu poveznicu.",
+    INVALID_PASSWORD_RESET:
+      "Poveznica za lozinku nije valjana, istekla je ili je već korištena. Zatražite novu poveznicu.",
     MAIL_NOT_CONFIGURED:
-      "Potvrda e-maila trenutačno nije dostupna. Pokušajte ponovno kasnije.",
+      "Slanje e-maila trenutačno nije dostupno. Pokušajte ponovno kasnije.",
     EMAIL_DELIVERY_FAILED:
       "Slanje e-maila trenutačno nije dostupno. Pokušajte ponovno kasnije.",
     MARKET_UNAVAILABLE: "Tržišni podaci trenutačno nisu dostupni.",

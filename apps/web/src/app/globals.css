@@ -2056,6 +2056,12 @@ strong {
   font-size: 13px;
   color: var(--muted);
 }
+.auth-recovery-link {
+  align-self: flex-end;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+}
 .auth-switch a {
   color: var(--green);
   font-weight: 600;

@@ -72,6 +72,16 @@ export class RetentionService implements OnModuleInit, OnModuleDestroy {
         const quotas = await tx.emailQuota.deleteMany({
           where: { expiresAt: { lte: now } },
         });
+        await tx.user.updateMany({
+          where: { passwordResetExpiresAt: { lte: now } },
+          data: { passwordResetTokenHash: null, passwordResetExpiresAt: null },
+        });
+        await tx.user.updateMany({
+          where: {
+            passwordResetSentAt: { lte: new Date(now.getTime() - 86_400_000) },
+          },
+          data: { passwordResetSentAt: null },
+        });
         // Never purge verified accounts or any legacy unverified user with financial records.
         const registrations = await tx.user.deleteMany({
           where: {

@@ -75,6 +75,9 @@ export const verifyEmailSchema = z
     password: signupPasswordSchema,
   })
   .strict();
+export const forgotPasswordSchema = resendVerificationSchema;
+export const resetPasswordSchema = verifyEmailSchema;
+export const passwordResetMinutes = 30;
 export const settingsSchema = z
   .object({ locale: localeSchema, timeZone: timeZoneSchema })
   .strict();
