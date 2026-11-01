@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { marketFixture } from "./market-fixture.js";
+import { MarketBudget } from "../src/instruments.js";
 
 test("on-demand quotes, shared caching and valuation authorization", async (suite) => {
   const f = await marketFixture(suite);
@@ -245,6 +246,41 @@ test("on-demand quotes, shared caching and valuation authorization", async (suit
           ).status,
           400,
         );
+      },
+    );
+    await suite.test(
+      "concurrent provider cooldowns retain the longest wait across API instances",
+      async () => {
+        const id = "yahoo:provider-backoff";
+        const previous = await f.db.marketJob.findUnique({ where: { id } });
+        const baseline = Math.max(
+          Date.now(),
+          previous?.leaseUntil.getTime() ?? 0,
+        );
+        const first = new MarketBudget(f.db),
+          second = new MarketBudget(f.db);
+        const longest = new Date(baseline + 600000);
+        try {
+          await Promise.all([
+            first.block(longest),
+            second.block(new Date(baseline + 60000)),
+          ]);
+          await second.block(new Date(baseline + 300000));
+          assert.equal(
+            (
+              await f.db.marketJob.findUniqueOrThrow({ where: { id } })
+            ).leaseUntil.getTime(),
+            longest.getTime(),
+          );
+          await assert.rejects(second.reserve(), /MARKET_RATE_LIMIT/);
+        } finally {
+          if (previous)
+            await f.db.marketJob.update({
+              where: { id },
+              data: { leaseUntil: previous.leaseUntil },
+            });
+          else await f.db.marketJob.deleteMany({ where: { id } });
+        }
       },
     );
   } finally {

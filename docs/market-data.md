@@ -18,10 +18,12 @@ The limits cover all users and both searches and price refreshes. An uncached se
 
 - `MARKET_MINUTE_LIMIT`: Opulya's configured minute allowance is exhausted; the next UTC minute starts a new window.
 - `MARKET_DAILY_LIMIT`: Opulya's configured daily allowance is exhausted; it resets at 00:00 UTC. This is not a Yahoo-imposed daily quota.
-- `MARKET_RATE_LIMIT`: Yahoo throttled a request, or the shared 60-second provider backoff is still active.
+- `MARKET_RATE_LIMIT`: Yahoo throttled a request, or the shared provider cooldown is still active. HTTP 429 responses respect `Retry-After` (seconds or an HTTP date), with a minimum one-minute pause. Without a usable hint, the API pauses for five minutes. Requests during this pause do not contact Yahoo or extend the cooldown.
 - `MARKET_BUSY`: the local request queue or pacing wait is full; it does not mean Yahoo returned HTTP 429.
 
-API logs distinguish `Opulya market request limit reached` (including the configured limit and reset time) from `Yahoo Finance request throttled`. These logs omit search text and user holdings. For production, inspect these events and the API service's `MARKET_REQUESTS_PER_MINUTE` and `MARKET_REQUESTS_PER_DAY` settings before changing caps. Raising an Opulya cap does not remove upstream throttling.
+API logs distinguish `Opulya market request limit reached` (including the configured limit and reset time) from `Yahoo Finance request throttled` (including the upstream status when available, search/quote/session stage, and retry time). These logs omit request URLs, cookies, search text and user holdings. The shared cooldown only moves later, so concurrent instances cannot shorten Yahoo's requested wait. For production, inspect these events and the API service's `MARKET_REQUESTS_PER_MINUTE` and `MARKET_REQUESTS_PER_DAY` settings before changing caps. Raising an Opulya cap does not remove upstream throttling.
+
+The browser sees HTTP 503 when a catalogue request is unavailable because of a market limit. This is Opulya's response, not the original Yahoo HTTP status. Use the response's `code` and the API logs above for diagnosis. A cooldown reduces repeated rejected calls; it does not guarantee Yahoo will accept the next request.
 
 ## Catalogue and prices
 

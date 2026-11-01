@@ -131,21 +131,56 @@ export function yahooInstrument(value: unknown): InstrumentInput | null {
   });
   return row.success ? row.data : null;
 }
+const yahooFailureSchema = z.object({
+  status: z.number().optional(),
+  code: z.union([z.string(), z.number()]).optional(),
+  message: z.string().optional(),
+});
+function yahooStatus(error: unknown) {
+  const detail = yahooFailureSchema.safeParse(error);
+  return detail.success
+    ? (detail.data.status ??
+        (typeof detail.data.code === "number" ? detail.data.code : undefined))
+    : undefined;
+}
+const defaultBackoffMs = 5 * 60000;
+type YahooEndpoint = "search" | "quote" | "session";
+class YahooRateLimitError extends Error {
+  readonly status = 429;
+  constructor(
+    readonly retryAt: number,
+    readonly endpoint: YahooEndpoint,
+  ) {
+    super("MARKET_RATE_LIMIT");
+  }
+}
+function retryAt(header: string | null, now: number) {
+  if (header?.trim()) {
+    const seconds = Number(header);
+    const until =
+      Number.isFinite(seconds) && seconds >= 0
+        ? now + seconds * 1000
+        : Date.parse(header);
+    if (Number.isFinite(new Date(until).getTime()) && until >= now)
+      return Math.max(now + 60000, until);
+  }
+  return now + defaultBackoffMs;
+}
+function yahooEndpoint(input: string | URL | Request): YahooEndpoint {
+  const path = new URL(input instanceof Request ? input.url : input).pathname;
+  if (path.endsWith("/finance/search")) return "search";
+  if (/\/finance\/quote(?:Summary)?(?:\/|$)/.test(path)) return "quote";
+  return "session";
+}
 export function yahooError(error: unknown): string {
   if (error instanceof Error && /^MARKET_[A-Z_]+$/.test(error.message))
     return error.message;
-  const detail = z
-    .object({
-      status: z.number().optional(),
-      code: z.string().optional(),
-      message: z.string().optional(),
-    })
-    .safeParse(error);
+  const detail = yahooFailureSchema.safeParse(error);
   const text = detail.success
     ? `${detail.data.code ?? ""} ${detail.data.message ?? ""}`
     : "";
-  const status = detail.success ? detail.data.status : undefined;
-  if (status === 429 || /too many requests|rate.?limit|429/i.test(text))
+  const status = yahooStatus(error);
+  if (status === 429 || /too many requests|rate.?limit|\b429\b/i.test(text))
     return "MARKET_RATE_LIMIT";
   if (
     status === 401 ||
@@ -171,7 +206,7 @@ export class YahooFinanceProvider {
   constructor(
     private readonly budget: {
       reserve(): Promise<void>;
-      block?(): Promise<void>;
+      block?(until: Date): Promise<void>;
     },
     db?: Database,
     client?: InstanceType<typeof YahooFinance>,
@@ -185,10 +220,27 @@ export class YahooFinanceProvider {
         suppressNotices: ["yahooSurvey"],
         validation: { logErrors: false },
         fetch: async (url, init) => {
+          if (this.blockedUntil > Date.now())
+            throw new YahooRateLimitError(
+              this.blockedUntil,
+              yahooEndpoint(url),
+            );
           const response = await fetch(url, {
             ...init,
             signal: AbortSignal.timeout(15000),
           });
+          if (response.status === 429) {
+            const until = retryAt(
+              response.headers.get("retry-after"),
+              Date.now(),
+            );
+            this.blockedUntil = Math.max(this.blockedUntil, until);
+            await response.body?.cancel().catch(() => {});
+            throw new YahooRateLimitError(
+              this.blockedUntil,
+              yahooEndpoint(url),
+            );
+          }
           if (!response.body) return response;
           const reader = response.body.getReader(),
             chunks: Uint8Array[] = [];
@@ -216,7 +268,10 @@ export class YahooFinanceProvider {
         logger: { info() {}, warn() {}, error() {}, debug() {}, dir() {} },
       });
   }
-  private async request<T>(load: () => Promise<T>): Promise<T> {
+  private async request<T>(
+    operation: "search" | "quote",
+    load: () => Promise<T>,
+  ): Promise<T> {
     if (!marketDataEnabled()) throw new Error("MARKET_NOT_CONFIGURED");
     if (this.blockedUntil > Date.now()) throw new Error("MARKET_RATE_LIMIT");
     await this.budget.reserve();
@@ -225,18 +280,29 @@ export class YahooFinanceProvider {
     } catch (error) {
       const code = yahooError(error);
       if (code === "MARKET_RATE_LIMIT") {
+        const now = Date.now();
+        this.blockedUntil = Math.max(
+          this.blockedUntil,
+          error instanceof YahooRateLimitError
+            ? error.retryAt
+            : now + defaultBackoffMs,
+        );
         console.warn("Yahoo Finance request throttled", {
           code,
-          backoffMs: 60000,
+          operation,
+          endpoint:
+            error instanceof YahooRateLimitError ? error.endpoint : operation,
+          status: yahooStatus(error) ?? null,
+          backoffMs: this.blockedUntil - now,
+          retryAt: new Date(this.blockedUntil).toISOString(),
         });
-        this.blockedUntil = Date.now() + 60000;
-        await this.budget.block?.();
+        await this.budget.block?.(new Date(this.blockedUntil));
       }
       throw new Error(code, { cause: error });
     }
   }
   private async quotes(symbols: string[]): Promise<Quote[]> {
-    return this.request(async () => {
+    return this.request("quote", async () => {
       const rows = await this.client.quote(symbols);
       return rows.flatMap((value) => {
         const parsed = quoteSchema.safeParse(value);
@@ -298,7 +364,7 @@ export class YahooFinanceProvider {
       86400000,
       rowsSchema,
       async () => {
-        const result = await this.request(() =>
+        const result = await this.request("search", () =>
           this.client.search(query, {
             quotesCount: 30,
             newsCount: 0,

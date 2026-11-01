@@ -102,12 +102,15 @@ export function marketError(error: unknown) {
 export class MarketBudget {
   private lastCleanupAt = 0;
   constructor(@Inject(Database) private readonly db: Database) {}
-  async block() {
+  async block(until: Date) {
     const id = "yahoo:provider-backoff";
-    await this.db.marketJob.upsert({
-      where: { id },
-      create: { id, leaseUntil: new Date(Date.now() + 60000) },
-      update: { leaseUntil: new Date(Date.now() + 60000) },
+    await this.db.marketJob.createMany({
+      data: { id, leaseUntil: until },
+      skipDuplicates: true,
+    });
+    await this.db.marketJob.updateMany({
+      where: { id, leaseUntil: { lt: until } },
+      data: { leaseUntil: until },
     });
   }
   async reserve() {

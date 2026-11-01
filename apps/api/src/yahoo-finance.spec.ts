@@ -73,6 +73,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("Yahoo catalogue and identity", () => {
@@ -244,6 +246,114 @@ describe("Yahoo catalogue and identity", () => {
   });
 });
 describe("Yahoo prices", () => {
+  it.each([
+    [429, "MARKET_RATE_LIMIT"],
+    [401, "MARKET_AUTH_FAILED"],
+    [403, "MARKET_AUTH_FAILED"],
+    [404, "MARKET_SYMBOL_NOT_FOUND"],
+    [503, "MARKET_UNAVAILABLE"],
+  ])("recognizes the client's numeric HTTP code %i", (code, expected) => {
+    expect(yahooError({ code, message: "HTTP error" })).toBe(expected);
+  });
+  it.each([
+    ["600", 600000],
+    ["Mon, 19 Oct 2026 12:10:00 GMT", 600000],
+    ["0", 60000],
+    ["invalid", 300000],
+    [null, 300000],
+  ])(
+    "honors Retry-After %s and blocks further outbound searches",
+    async (header, delay) => {
+      const outbound = vi.fn().mockImplementation(
+        async () =>
+          new Response("Too Many Requests", {
+            status: 429,
+            headers: header === null ? {} : { "Retry-After": header },
+          }),
+      );
+      vi.stubGlobal("fetch", outbound);
+      const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const budget = {
+        reserve: vi.fn().mockResolvedValue(undefined),
+        block: vi.fn().mockResolvedValue(undefined),
+      };
+      const provider = new YahooFinanceProvider(budget);
+      await expect(provider.search("private-query")).rejects.toThrow(
+        "MARKET_RATE_LIMIT",
+      );
+      const until = new Date(now.getTime() + delay);
+      expect(warning).toHaveBeenCalledExactlyOnceWith(
+        "Yahoo Finance request throttled",
+        {
+          code: "MARKET_RATE_LIMIT",
+          operation: "search",
+          endpoint: "search",
+          status: 429,
+          backoffMs: delay,
+          retryAt: until.toISOString(),
+        },
+      );
+      expect(budget.block).toHaveBeenCalledExactlyOnceWith(until);
+      vi.setSystemTime(new Date(until.getTime() - 1));
+      await expect(provider.search("second-query")).rejects.toThrow(
+        "MARKET_RATE_LIMIT",
+      );
+      expect(outbound).toHaveBeenCalledOnce();
+      expect(budget.reserve).toHaveBeenCalledOnce();
+      expect(budget.block).toHaveBeenCalledOnce();
+      vi.setSystemTime(until);
+      await expect(provider.search("third-query")).rejects.toThrow(
+        "MARKET_RATE_LIMIT",
+      );
+      expect(outbound).toHaveBeenCalledTimes(2);
+    },
+  );
+  it("identifies a throttled Yahoo session separately from the requested quote", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(new Response("Too Many Requests", { status: 429 })),
+    );
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const provider = new YahooFinanceProvider({ reserve: async () => {} });
+    await expect(provider.resolve("IWDA.AS", "EUR", "ETF")).rejects.toThrow(
+      "MARKET_RATE_LIMIT",
+    );
+    expect(warning).toHaveBeenCalledWith(
+      "Yahoo Finance request throttled",
+      expect.objectContaining({
+        operation: "quote",
+        endpoint: "session",
+        status: 429,
+      }),
+    );
+  });
+  it("stops already queued searches after the first Yahoo throttle", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    const outbound = vi
+      .fn()
+      .mockImplementation(
+        async () => new Response("Too Many Requests", { status: 429 }),
+      );
+    vi.stubGlobal("fetch", outbound);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const provider = new YahooFinanceProvider({ reserve: async () => {} });
+    const pending = Promise.allSettled([
+      provider.search("IWDA"),
+      provider.search("AAPL"),
+      provider.search("MSFT"),
+    ]);
+    await vi.advanceTimersByTimeAsync(1000);
+    const results = await pending;
+    expect(results.map((result) => result.status)).toEqual([
+      "rejected",
+      "rejected",
+      "rejected",
+    ]);
+    expect(outbound).toHaveBeenCalledOnce();
+  });
   it.each(["Alpha Vantage", "Twelve Data", "Coinbase"])(
     "rejects a %s mapping before looking up any quote",
     async (source) => {
@@ -316,10 +426,14 @@ describe("Yahoo prices", () => {
     await expect(provider.search("IWDA")).rejects.toThrow("MARKET_RATE_LIMIT");
     await expect(provider.search("AAPL")).rejects.toThrow("MARKET_RATE_LIMIT");
     expect(client.search).toHaveBeenCalledOnce();
-    expect(warning).toHaveBeenCalledWith("Yahoo Finance request throttled", {
-      code: "MARKET_RATE_LIMIT",
-      backoffMs: 60000,
-    });
+    expect(warning).toHaveBeenCalledWith(
+      "Yahoo Finance request throttled",
+      expect.objectContaining({
+        code: "MARKET_RATE_LIMIT",
+        operation: "search",
+        backoffMs: 300000,
+      }),
+    );
     warning.mockRestore();
     expect(yahooError(new Error("private server details"))).toBe(
       "MARKET_UNAVAILABLE",
