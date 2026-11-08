@@ -1,5 +1,5 @@
 import { testDatabaseUrl } from "../../packages/config/test-database.js";
-import { test as base, type Locator } from "@playwright/test";
+import { test as base, type Locator, type Page } from "@playwright/test";
 import { createHash, randomUUID } from "node:crypto";
 import { readFile, unlink } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -76,6 +76,16 @@ export async function catalogueFixture(input: {
 }
 
 export { expect, type Page } from "@playwright/test";
+
+export async function openTransactionFilters(page: Page, name = "Filters") {
+  const toggle = page.getByRole("button", { name });
+  if (
+    (await toggle.isVisible()) &&
+    (await toggle.getAttribute("aria-expanded")) === "false"
+  ) {
+    await toggle.click();
+  }
+}
 
 export async function chooseOption(
   picker: Locator,

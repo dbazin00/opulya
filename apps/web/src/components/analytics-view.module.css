@@ -1,0 +1,145 @@
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 240px) 88px minmax(0, 240px);
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.controls > :global(.month-picker) {
+  min-width: 0;
+  height: 44px;
+}
+
+.controls :global(.month-picker) input {
+  flex: 1;
+  width: 0;
+  max-width: none;
+  min-height: 0;
+  height: 42px;
+}
+
+.controls :global(.month-picker) :global(.icon-button) {
+  height: 42px;
+}
+
+.report :global(.section-heading) {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 600px) {
+  .controls {
+    grid-template-columns: minmax(0, 1fr) 88px;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .controls > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .summary:global(.stats-row) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+    margin: 16px 0;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+
+  .summary > :global(.stat) {
+    gap: 4px;
+  }
+
+  .summary > :global(.stat) > span:first-child {
+    min-height: 0;
+  }
+
+  .summary > :global(.stat):first-child {
+    grid-column: 1 / -1;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .summary > :global(.stat):first-child > :global(.money) {
+    font-size: 26px;
+  }
+
+  .summary > :global(.stat):nth-child(2) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .report :global(.two-columns) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report :global(.section) {
+    padding-block: 18px;
+  }
+
+  .report :global(.chart) {
+    height: 196px;
+    margin-top: 10px;
+  }
+
+  .report :global(.compact-chart) {
+    height: 176px;
+  }
+
+  .report :global(.chart-data) summary {
+    min-height: 44px;
+  }
+
+  .report :global(.distribution) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .report :global(.donut) {
+    justify-self: center;
+    width: min(100%, 200px);
+    height: 180px;
+  }
+
+  .report :global(.legend) button {
+    min-height: 44px;
+  }
+
+  .report :global(.calendar) button {
+    aspect-ratio: auto;
+  }
+
+  .accountBreakdown > div {
+    display: grid;
+    gap: 6px;
+  }
+
+  .accountBreakdown :global(.account-flow) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    text-align: left;
+    gap: 8px;
+  }
+
+  .accountBreakdown :global(.money) {
+    display: block;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 319px) {
+  .controls {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .controls > :global(.month-picker) {
+    grid-column: 1 / -1;
+  }
+
+  .controls > :last-child {
+    grid-column: auto;
+  }
+}

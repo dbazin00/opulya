@@ -2,6 +2,7 @@ import {
   test,
   expect,
   chooseOption,
+  openTransactionFilters,
   catalogueFixture,
   verificationMail,
   removeVerificationMail,
@@ -185,6 +186,7 @@ test("register, manage finances, drill down, localize and render responsively", 
   await expect(page.getByText("Weekly groceries")).toBeVisible();
   await expect(page.getByText("Monthly salary")).toBeVisible();
   await noOverflow(page);
+  await openTransactionFilters(page);
   await chooseOption(page.getByLabel("Category", { exact: true }), food.id);
   await expect(page.getByText("Monthly salary")).not.toBeVisible();
   await expect(page.getByText("Weekly groceries")).toBeVisible();

@@ -3,7 +3,13 @@ import { randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../apps/api/src/generated/prisma/client";
 import AxeBuilder from "@axe-core/playwright";
-import { test, expect, chooseOption, type Page } from "./fixtures";
+import {
+  test,
+  expect,
+  chooseOption,
+  openTransactionFilters,
+  type Page,
+} from "./fixtures";
 
 test("category paths lead transactions, descriptions stay separate and balances sit below amounts", async ({
   page,
@@ -152,14 +158,13 @@ test("category paths lead transactions, descriptions stay separate and balances 
       amounts.map((amount) => amount.boundingBox()),
     );
     const reference = amountBoxes[0]!;
+    const alignsLeft =
+      testInfo.project.name === "mobile" &&
+      (await page.locator(".transaction-list.is-compact").isVisible());
     for (const box of amountBoxes) {
       expect(box).not.toBeNull();
-      const edge =
-        testInfo.project.name === "mobile" ? box!.x : box!.x + box!.width;
-      const expected =
-        testInfo.project.name === "mobile"
-          ? reference.x
-          : reference.x + reference.width;
+      const edge = alignsLeft ? box!.x : box!.x + box!.width;
+      const expected = alignsLeft ? reference.x : reference.x + reference.width;
       expect(Math.abs(edge - expected)).toBeLessThan(1);
     }
     const actions = await page
@@ -244,6 +249,9 @@ test("category paths lead transactions, descriptions stay separate and balances 
     ).toEqual([]);
   };
   const assertFilters = async (locale: "en" | "hr") => {
+    const mobile = testInfo.project.name === "mobile";
+    const filterLabel = locale === "en" ? "Filters" : "Filtri";
+    const toggle = page.getByRole("button", { name: filterLabel });
     const labels =
       locale === "en"
         ? ["Account", "Type", "Category", "Start date", "End date"]
@@ -251,6 +259,11 @@ test("category paths lead transactions, descriptions stay separate and balances 
     const controls = labels.map((name) =>
       page.getByLabel(name, { exact: true }),
     );
+    if (mobile) {
+      await expect(toggle).toHaveAttribute("aria-expanded", "false");
+      await expect(controls[0]!).toBeHidden();
+      await openTransactionFilters(page, filterLabel);
+    }
     const originalViewport = page.viewportSize()!;
     const widths =
       testInfo.project.name === "mobile" ? [320, 360, 430, 768] : [1024, 1440];
@@ -290,6 +303,20 @@ test("category paths lead transactions, descriptions stay separate and balances 
           currency!.x + currency!.width - month!.x,
           0,
         );
+        const filterButton = await toggle.boundingBox();
+        const countHeading = await page
+          .getByRole("heading", {
+            name: locale === "en" ? "5 transactions" : "5 transakcija",
+            exact: true,
+          })
+          .boundingBox();
+        expect(filterButton!.x).toBeGreaterThanOrEqual(
+          countHeading!.x + countHeading!.width,
+        );
+        expect(filterButton!.y + filterButton!.height / 2).toBeCloseTo(
+          countHeading!.y + countHeading!.height / 2,
+          0,
+        );
       }
       expect(
         await page.evaluate(
@@ -305,7 +332,16 @@ test("category paths lead transactions, descriptions stay separate and balances 
     await chooseOption(controls[0]!, bank.id);
     await expect(controls[0]!).toHaveAttribute("title", bank.name);
     await expect(page.locator(".transaction-row")).toHaveCount(5);
+    if (mobile) {
+      await expect(toggle).toHaveAccessibleName(`${filterLabel} (1)`);
+      await toggle.click();
+      await expect(controls[0]!).toBeHidden();
+      await expect(page.locator(".transaction-row")).toHaveCount(5);
+      await openTransactionFilters(page, filterLabel);
+      await expect(controls[0]!).toHaveAttribute("title", bank.name);
+    }
     await chooseOption(controls[0]!, "");
+    if (mobile) await toggle.click();
   };
   await page.goto("/transactions");
   await assertList(page);
@@ -384,7 +420,19 @@ test("category paths lead transactions, descriptions stay separate and balances 
     page.getByRole("combobox", { name: "Display language", exact: true }),
     "hr",
   );
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page
+    .locator("form")
+    .filter({
+      has: page.getByRole("combobox", {
+        name: "Display language",
+        exact: true,
+      }),
+    })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Postavke", exact: true }),
+  ).toBeVisible();
   await page.goto("/transactions");
   await assertList(page, "Stanje nakon transakcije");
   await assertFilters("hr");

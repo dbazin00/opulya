@@ -94,6 +94,9 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
   );
   const allExpanded =
     !!query || [...branchIds].every((id) => !collapsed.has(id));
+  const toggleAllLabel = t(
+    allExpanded ? "categories.collapseAll" : "categories.expandAll",
+  );
   const lastSibling = new Map(visible.map((c) => [c.parentId, c.id]));
   const rows = categoryTree(visible, query ? undefined : collapsed);
   const continues: boolean[] = [];
@@ -106,18 +109,6 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
     });
   return (
     <>
-      <div className="section-heading category-heading">
-        <h2>{t("categories.allCategories")}</h2>
-        <Button
-          onClick={() => {
-            setParent(undefined);
-            setForm("new");
-          }}
-        >
-          <Plus size={17} />
-          {t("categories.add")}
-        </Button>
-      </div>
       <div className="category-controls">
         <Field label={t("categories.search")}>
           {(id) => (
@@ -144,9 +135,7 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
         </Field>
         <div className="toolbar">
           <IconButton
-            label={t(
-              allExpanded ? "categories.collapseAll" : "categories.expandAll",
-            )}
+            label={toggleAllLabel}
             disabled={!!query || !branchIds.size}
             onClick={() =>
               setCollapsed((old) => {
@@ -160,25 +149,45 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
             }
           >
             {allExpanded ? (
-              <FoldVertical size={18} />
+              <FoldVertical size={18} aria-hidden="true" />
             ) : (
-              <UnfoldVertical size={18} />
+              <UnfoldVertical size={18} aria-hidden="true" />
             )}
+            <span className="category-toggle-label" aria-hidden="true">
+              {toggleAllLabel}
+            </span>
           </IconButton>
         </div>
       </div>
-      <label className="check filter-check">
-        <input
-          type="checkbox"
-          checked={includeArchived}
-          onChange={(e) => setIncludeArchived(e.target.checked)}
-        />
-        {t("categories.includeArchived")}
-      </label>
+      <div className="toolbar category-actions">
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={includeArchived}
+            onChange={(e) => setIncludeArchived(e.target.checked)}
+          />
+          {t("categories.includeArchived")}
+        </label>
+        <Button
+          onClick={() => {
+            setParent(undefined);
+            setForm("new");
+          }}
+        >
+          <Plus size={17} aria-hidden="true" />
+          {t("categories.add")}
+        </Button>
+      </div>
       <ul className="category-tree" aria-label={t("categories.allCategories")}>
         {rows.map(({ category: c, depth, childCount }) => {
           const name = categoryName(c, t);
           const expanded = !!query || !collapsed.has(c.id);
+          const Chevron = expanded ? ChevronDown : ChevronRight;
+          const CategoryIcon = childCount
+            ? expanded
+              ? FolderOpen
+              : Folder
+            : Tag;
           const isLast = lastSibling.get(c.parentId) === c.id;
           continues[depth] = !isLast;
           // Show the nearest ancestors when indentation reaches the viewport limit.
@@ -205,28 +214,10 @@ export function CategoriesView({ categories }: { categories: Category[] }) {
               <span
                 className={`category-toggle${childCount && expanded ? " has-stem" : ""}`}
               >
-                {childCount ? (
-                  <span className="category-chevron" aria-hidden="true">
-                    {expanded ? (
-                      <ChevronDown size={17} />
-                    ) : (
-                      <ChevronRight size={17} />
-                    )}
-                  </span>
-                ) : (
-                  <span className="category-leaf" aria-hidden="true" />
-                )}
+                {childCount > 0 && <Chevron size={17} aria-hidden="true" />}
               </span>
               <span className="category-tree-name">
-                {childCount ? (
-                  expanded ? (
-                    <FolderOpen size={18} aria-hidden="true" />
-                  ) : (
-                    <Folder size={18} aria-hidden="true" />
-                  )
-                ) : (
-                  <Tag size={16} aria-hidden="true" />
-                )}
+                <CategoryIcon size={childCount ? 18 : 16} aria-hidden="true" />
                 <span className="category-tree-label">
                   <strong>{name}</strong>
                   <span>

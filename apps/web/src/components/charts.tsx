@@ -372,6 +372,7 @@ export function DailyChart({
 }) {
   const t = useTranslations();
   const locale = resolveLocale(useLocale());
+  const formatTick = new Intl.NumberFormat(locale, { notation: "compact" });
   return (
     <>
       <div
@@ -394,7 +395,13 @@ export function DailyChart({
               tickLine={false}
               interval={4}
             />
-            <YAxis width={45} fontSize={11} axisLine={false} tickLine={false} />
+            <YAxis
+              width={45}
+              fontSize={11}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={formatTick.format}
+            />
             <Tooltip
               contentStyle={tooltipStyle}
               itemStyle={tooltipItemStyle}

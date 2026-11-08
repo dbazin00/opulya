@@ -8,17 +8,30 @@ import { api, queryString } from "@/lib/api";
 import type { Account, Analytics, Category, Transaction } from "@/lib/types";
 import { DailyChart, DistributionChart, FlowChart } from "./charts";
 import { categoryName, categoryPath } from "./forms";
-import { Empty, ErrorNotice, Loading, Modal, Money, Stat } from "./ui";
+import {
+  Empty,
+  ErrorNotice,
+  Loading,
+  Modal,
+  Money,
+  MonthPicker,
+  Stat,
+} from "./ui";
 import { TransactionList } from "./transaction-list";
-import { useUser } from "./providers";
+import { useCurrencies, useUser } from "./providers";
+import styles from "./analytics-view.module.css";
 export function AnalyticsView({
   month,
+  onMonthChange,
   currency,
+  onCurrencyChange,
   accounts,
   categories,
 }: {
   month: string;
+  onMonthChange: (month: string) => void;
   currency: string;
+  onCurrencyChange: (currency: string) => void;
   accounts: Account[];
   categories: Category[];
 }) {
@@ -29,6 +42,7 @@ export function AnalyticsView({
     numeric: true,
   });
   const user = useUser();
+  const currencies = useCurrencies();
   const [parentId, setParent] = useState("");
   const [type, setType] = useState("EXPENSE");
   const [accountId, setAccount] = useState("");
@@ -53,7 +67,20 @@ export function AnalyticsView({
   );
   return (
     <>
-      <div className="filters">
+      <div className={styles.controls}>
+        <MonthPicker value={month} onChange={onMonthChange} />
+        <Dropdown
+          value={currency}
+          onValueChange={(value) => {
+            setAccount("");
+            onCurrencyChange(value);
+          }}
+          aria-label={t("common.currency")}
+        >
+          {currencies.map((value) => (
+            <option key={value}>{value}</option>
+          ))}
+        </Dropdown>
         <Dropdown
           value={accountId}
           onValueChange={(value) => setAccount(value)}
@@ -76,8 +103,13 @@ export function AnalyticsView({
         <Loading />
       ) : (
         a && (
-          <>
-            <section className="stats-row">
+          <div className={styles.report}>
+            <section className={`stats-row ${styles.summary}`}>
+              <Stat
+                label={t("analytics.net")}
+                value={a.net}
+                currency={currency}
+              />
               <Stat
                 label={t("analytics.income")}
                 value={a.income}
@@ -89,15 +121,22 @@ export function AnalyticsView({
                 value={a.expenses}
                 currency={currency}
               />
-              <Stat
-                label={t("analytics.net")}
-                value={a.net}
-                currency={currency}
-              />
             </section>
             <div className="two-columns">
               <section className="section">
-                <h2>{t("analytics.monthly")}</h2>
+                <div className="section-heading">
+                  <h2>{t("analytics.monthly")}</h2>
+                  <div className="inline-legend">
+                    <span>
+                      <i className="green-dot" aria-hidden="true" />
+                      {t("analytics.income")}
+                    </span>
+                    <span>
+                      <i className="gold-dot" aria-hidden="true" />
+                      {t("analytics.expenses")}
+                    </span>
+                  </div>
+                </div>
                 <FlowChart data={a.trends} currency={currency} />
               </section>
               <section className="section">
@@ -121,12 +160,16 @@ export function AnalyticsView({
                     <option value="INCOME">{t("types.INCOME")}</option>
                   </Dropdown>
                 </div>
-                <div className="category-breadcrumb">
-                  <button onClick={() => setParent(parent?.parentId ?? "")}>
-                    {parent ? t("common.back") : t("analytics.root")}
-                  </button>
-                  {parent && <span>{categoryPath(parent, categories, t)}</span>}
-                </div>
+                {parentId && (
+                  <div className="category-breadcrumb">
+                    <button onClick={() => setParent(parent?.parentId ?? "")}>
+                      {t("common.back")}
+                    </button>
+                    {parent && (
+                      <span>{categoryPath(parent, categories, t)}</span>
+                    )}
+                  </div>
+                )}
                 <DistributionChart
                   rows={a.distribution
                     .map((c) => ({
@@ -186,7 +229,7 @@ export function AnalyticsView({
               <section className="section">
                 <h2>{t("analytics.account")}</h2>
                 {a.accounts.length ? (
-                  <div className="data-list">
+                  <div className={`data-list ${styles.accountBreakdown}`}>
                     {orderedAccounts.map((account) => (
                       <div key={account.id}>
                         <strong>{account.name}</strong>
@@ -215,7 +258,7 @@ export function AnalyticsView({
                 <FlowChart data={a.trends} currency={currency} balance />
               </section>
             </div>
-          </>
+          </div>
         )
       )}
       <Modal

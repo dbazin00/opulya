@@ -109,7 +109,6 @@ export function AssetsView() {
           {t("investments.addAsset")}
         </Button>
       </div>
-      <p className="asset-schedule muted">{t("assets.schedule")}</p>
       <ErrorNotice error={assets.error || prices.error} />
       {assets.isLoading ? (
         <Loading />
@@ -175,6 +174,7 @@ export function AssetsView() {
               );
             })}
           </ul>
+          <p className="asset-schedule muted">{t("assets.schedule")}</p>
           <MarketDataCredit />
         </>
       )}
@@ -219,9 +219,12 @@ export function AssetsView() {
       >
         {adding && (
           <InstrumentPicker
-            currency={currency}
+            initialCurrency={currency}
             initialType={type || undefined}
-            onDone={() => setAdding(false)}
+            onDone={(asset) => {
+              setCurrency(asset.currency);
+              setAdding(false);
+            }}
           />
         )}
       </Modal>

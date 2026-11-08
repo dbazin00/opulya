@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import { forgetVerification } from "@/lib/pending-verification";
 import { useUser } from "./providers";
 import { Button, ErrorNotice, Field, Modal } from "./ui";
+import { LegalLinks } from "./legal-links";
 
 type Action = "export" | "delete" | "restrict" | "resume";
 
@@ -124,6 +125,7 @@ export function PrivacySettings({ contact }: { contact?: string }) {
         <Mail size={17} aria-hidden />
         {t("contactAction")}
       </Link>
+      <LegalLinks />
       <Modal
         title={action ? t(`${action}Title`) : t("title")}
         description={action ? t(`${action}Confirmation`) : undefined}

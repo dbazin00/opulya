@@ -178,12 +178,41 @@ test("one catalogue search accepts names, symbols and ISINs without broker match
     expect(selectionBody).toEqual({ instrumentId: ids[0] });
     const asset = await db.asset.findFirstOrThrow({ where: { userId } });
     expect(asset.instrumentId).toBe(ids[0]);
-    await page.goto("/settings");
+    await page.getByRole("button", { name: "Add asset", exact: true }).click();
+    await search.fill(prefix);
+    await amsterdam.click();
+    await expect(save).toBeEnabled();
     await chooseOption(
-      page.getByRole("combobox", { name: "Display language", exact: true }),
-      "hr",
+      dialog.getByRole("combobox", { name: "Trading currency", exact: true }),
+      "USD",
     );
-    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(save).toBeDisabled();
+    const london = results
+      .getByRole("button")
+      .filter({ hasText: `${prefix}.L` });
+    await expect(results.getByRole("button")).toHaveCount(1);
+    await expect(london).toContainText("Trades in USD");
+    await london.click();
+    await save.click();
+    await expect(dialog).not.toBeVisible();
+    expect(selectionBody).toEqual({ instrumentId: ids[2] });
+    await expect(
+      page.getByRole("list", { name: "Assets", exact: true }),
+    ).toContainText(`${prefix}.L`);
+    await page.goto("/settings");
+    const language = page.getByRole("combobox", {
+      name: "Display language",
+      exact: true,
+    });
+    await chooseOption(language, "hr");
+    await page
+      .locator("form")
+      .filter({ has: language })
+      .getByRole("button", { name: "Save", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Postavke", exact: true }),
+    ).toBeVisible();
     await page.goto("/assets");
     await page
       .getByRole("button", { name: "Dodaj instrument", exact: true })

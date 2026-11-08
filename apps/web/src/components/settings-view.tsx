@@ -7,7 +7,6 @@ import { api } from "@/lib/api";
 import { Button, ErrorNotice, Field } from "./ui";
 import { useUser } from "./providers";
 import { LanguageSelect } from "./language-select";
-import { LegalLinks } from "./legal-links";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "./theme-provider";
 import { PrivacySettings } from "./privacy-settings";
@@ -38,12 +37,12 @@ export function SettingsView({ privacyContact }: { privacyContact?: string }) {
   }
   return (
     <div className="settings-layout">
-      <section className="section">
-        <h2>{t("settings.profile")}</h2>
+      <section className="section" aria-labelledby="settings-profile-title">
+        <h2 id="settings-profile-title">{t("settings.profile")}</h2>
         <ProfileForm />
       </section>
-      <section className="section">
-        <h2>{t("settings.preferences")}</h2>
+      <section className="section" aria-labelledby="settings-preferences-title">
+        <h2 id="settings-preferences-title">{t("settings.preferences")}</h2>
         <form className="entry-form" onSubmit={submit}>
           <div className="field">
             <span className="field-label" id="appearance-label">
@@ -110,7 +109,6 @@ export function SettingsView({ privacyContact }: { privacyContact?: string }) {
             </Button>
           </div>
         </form>
-        <LegalLinks />
       </section>
       <PrivacySettings contact={privacyContact} />
     </div>
@@ -145,32 +143,34 @@ function ProfileForm() {
   }
   return (
     <form className="entry-form" onSubmit={submit}>
-      <Field label={t("auth.firstName")}>
-        {(id) => (
-          <input
-            id={id}
-            name="firstName"
-            defaultValue={user.firstName}
-            maxLength={100}
-            autoComplete="given-name"
-            required
-            disabled={busy}
-          />
-        )}
-      </Field>
-      <Field label={t("auth.lastName")}>
-        {(id) => (
-          <input
-            id={id}
-            name="lastName"
-            defaultValue={user.lastName}
-            maxLength={100}
-            autoComplete="family-name"
-            required
-            disabled={busy}
-          />
-        )}
-      </Field>
+      <div className="form-grid">
+        <Field label={t("auth.firstName")}>
+          {(id) => (
+            <input
+              id={id}
+              name="firstName"
+              defaultValue={user.firstName}
+              maxLength={100}
+              autoComplete="given-name"
+              required
+              disabled={busy}
+            />
+          )}
+        </Field>
+        <Field label={t("auth.lastName")}>
+          {(id) => (
+            <input
+              id={id}
+              name="lastName"
+              defaultValue={user.lastName}
+              maxLength={100}
+              autoComplete="family-name"
+              required
+              disabled={busy}
+            />
+          )}
+        </Field>
+      </div>
       <Field label={t("auth.email")} hint={t("settings.emailCorrection")}>
         {(id) => <input id={id} type="email" value={user.email} readOnly />}
       </Field>

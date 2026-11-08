@@ -3,10 +3,14 @@ import AxeBuilder from "@axe-core/playwright";
 
 async function fitsViewport(page: Page) {
   expect(
-    await page.evaluate(() => ({
-      horizontal: document.documentElement.scrollWidth <= window.innerWidth,
-      vertical: document.documentElement.scrollHeight <= window.innerHeight,
-    })),
+    await page.evaluate(() => {
+      const { clientWidth, clientHeight, scrollWidth, scrollHeight } =
+        document.documentElement;
+      return {
+        horizontal: scrollWidth <= clientWidth,
+        vertical: scrollHeight <= clientHeight,
+      };
+    }),
   ).toEqual({ horizontal: true, vertical: true });
   for (const selector of [
     'input[name="email"]',
@@ -77,9 +81,10 @@ test("login and signup share header, footer and content widths across screen siz
         footer: { ...login.footer, y: 0 },
       });
       expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= innerWidth,
-        ),
+        await page.evaluate(() => {
+          const { clientWidth, scrollWidth } = document.documentElement;
+          return scrollWidth <= clientWidth;
+        }),
       ).toBe(true);
       for (const control of await page
         .locator(
@@ -108,6 +113,9 @@ test("login fits short screens in both languages, including an error", async ({
       ? [
           { width: 360, height: 800 },
           { width: 360, height: 568 },
+          { width: 320, height: 480 },
+          { width: 280, height: 568 },
+          { width: 568, height: 375 },
           { width: 667, height: 375 },
         ]
       : [
@@ -130,6 +138,9 @@ test("login fits short screens in both languages, including an error", async ({
         path: `test-results/login-${locale}-${size.width}x${size.height}.png`,
       });
     }
+  }
+  if (testInfo.project.name === "mobile") {
+    await page.setViewportSize({ width: 320, height: 568 });
   }
   await page.route("**/api/auth/login", (route) =>
     route.fulfill({

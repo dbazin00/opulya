@@ -181,6 +181,9 @@ test("edit investment activities with linked funding and localized exact times",
   await dialog.getByRole("button", { name: "Close", exact: true }).click();
 
   await page.goto(`/accounts/${account.id}`);
+  await page
+    .getByRole("button", { name: "Account history", exact: true })
+    .click();
   const saleRow = page
     .locator(".account-history .history-row")
     .filter({ has: page.getByText("Sell", { exact: true }) });

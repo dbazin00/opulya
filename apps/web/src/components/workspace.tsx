@@ -1,6 +1,6 @@
 "use client";
 import { Dropdown } from "./dropdown";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -9,7 +9,10 @@ import {
   ArrowRight,
   ArrowUpRight,
   Building2,
+  ChevronDown,
+  ChevronLeft,
   Scale,
+  SlidersHorizontal,
   Plus,
   Wallet,
   TrendingUp,
@@ -113,8 +116,8 @@ export function Workspace({
     queryFn: () => api<Category[]>("categories"),
     enabled: !user.processingRestrictedAt && view !== "settings",
   });
-  const showMonth =
-    ["transactions", "analytics", "budgets"].includes(view) || !!accountId;
+  const showMonth = ["transactions", "budgets"].includes(view);
+  const showCurrency = ["dashboard", "transactions", "budgets"].includes(view);
   if (user.processingRestrictedAt && view !== "settings")
     return (
       <div className="workspace">
@@ -125,47 +128,56 @@ export function Workspace({
         </Link>
       </div>
     );
+  if (view === "accounts" && accountId)
+    return (
+      <div className="workspace">
+        <Link className="back-link" href="/accounts">
+          <ChevronLeft size={16} aria-hidden="true" />
+          {t("accounts.backToAccounts")}
+        </Link>
+        <ErrorNotice error={accounts.error || categories.error} />
+        <AccountHistory
+          key={accountId}
+          accountId={accountId}
+          month={month}
+          onMonthChange={setMonth}
+          accounts={orderedAccounts}
+          categories={categories.data ?? []}
+        />
+      </div>
+    );
   return (
     <div className="workspace">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">
-            {view === "dashboard" ? t("dashboard.thisMonth") : t("brand")}
-          </p>
           <h1>{t(`${view === "dashboard" ? "dashboard" : view}.title`)}</h1>
           <p className="subtitle">{t(`${view}.subtitle`)}</p>
         </div>
-        <div
-          className={`page-actions${view === "transactions" ? ` ${transactionStyles.actions}` : ""}`}
-        >
-          {showMonth && <MonthPicker value={month} onChange={setMonth} />}
-          {["dashboard", "analytics", "transactions", "budgets"].includes(
-            view,
-          ) && (
-            <Dropdown
-              className="currency-select"
-              value={currency}
-              aria-label={t("common.currency")}
-              onValueChange={(value) => setCurrency(value)}
-            >
-              {currencies.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </Dropdown>
-          )}
-          {view === "accounts" && !accountId && (
-            <Button onClick={() => setAddAccount(true)}>
-              <Plus size={18} />
-              {t("accounts.add")}
-            </Button>
-          )}
-          {view === "transactions" && (
-            <Button onClick={() => setAddTransaction(true)}>
-              <Plus size={18} />
-              {t("transactions.add")}
-            </Button>
-          )}
-        </div>
+        {(showMonth || showCurrency) && (
+          <div
+            className={`page-actions${view === "transactions" ? ` ${transactionStyles.actions}` : ""}`}
+          >
+            {showMonth && <MonthPicker value={month} onChange={setMonth} />}
+            {showCurrency && (
+              <Dropdown
+                className="currency-select"
+                value={currency}
+                aria-label={t("common.currency")}
+                onValueChange={setCurrency}
+              >
+                {currencies.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </Dropdown>
+            )}
+            {view === "transactions" && (
+              <Button onClick={() => setAddTransaction(true)}>
+                <Plus size={18} />
+                {t("transactions.add")}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
       <ErrorNotice error={accounts.error || categories.error} />
       {view === "dashboard" && (
@@ -177,22 +189,13 @@ export function Workspace({
           onAddAccount={() => setAddAccount(true)}
         />
       )}
-      {view === "accounts" &&
-        (accountId ? (
-          <AccountHistory
-            accountId={accountId}
-            month={month}
-            accounts={orderedAccounts}
-            categories={categories.data ?? []}
-          />
-        ) : accounts.isLoading ? (
-          <Loading />
-        ) : (
-          <AccountsView
-            accounts={orderedAccounts}
-            onAdd={() => setAddAccount(true)}
-          />
-        ))}
+      {view === "accounts" && (
+        <AccountsView
+          accounts={orderedAccounts}
+          isLoading={accounts.isLoading}
+          onAdd={() => setAddAccount(true)}
+        />
+      )}
       {view === "transactions" && (
         <TransactionsView
           month={month}
@@ -217,7 +220,9 @@ export function Workspace({
       {view === "analytics" && (
         <AnalyticsView
           month={month}
+          onMonthChange={setMonth}
           currency={currency}
+          onCurrencyChange={setCurrency}
           accounts={orderedAccounts}
           categories={categories.data ?? []}
         />
@@ -356,7 +361,11 @@ function Dashboard({
       {o?.investments != null && Number(o.investments) > 0 && (
         <MarketDataCredit />
       )}
-      <section className="stats-row">
+      <section
+        className="stats-row monthly-summary"
+        aria-labelledby="monthly-summary-title"
+      >
+        <h2 id="monthly-summary-title">{t("dashboard.thisMonth")}</h2>
         <Stat
           label={t("dashboard.income")}
           value={a?.income}
@@ -471,9 +480,11 @@ function Dashboard({
 }
 function AccountsView({
   accounts,
+  isLoading,
   onAdd,
 }: {
   accounts: Account[];
+  isLoading: boolean;
   onAdd: () => void;
 }) {
   const t = useTranslations();
@@ -488,15 +499,23 @@ function AccountsView({
     .filter((group) => group.accounts.length);
   return (
     <>
-      <label className="check filter-check">
-        <input
-          type="checkbox"
-          checked={archived}
-          onChange={(e) => setArchived(e.target.checked)}
-        />
-        {t("accounts.includeArchived")}
-      </label>
-      {accounts.length ? (
+      <div className="toolbar account-list-actions">
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={archived}
+            onChange={(e) => setArchived(e.target.checked)}
+          />
+          {t("accounts.includeArchived")}
+        </label>
+        <Button onClick={onAdd}>
+          <Plus size={18} />
+          {t("accounts.add")}
+        </Button>
+      </div>
+      {isLoading ? (
+        <Loading />
+      ) : accounts.length ? (
         groups.map((group) => (
           <section
             key={group.type}
@@ -517,12 +536,7 @@ function AccountsView({
         <Empty
           title={t("dashboard.noAccounts")}
           description={t("dashboard.noAccountsBody")}
-        >
-          <Button onClick={onAdd}>
-            <Plus size={17} />
-            {t("accounts.add")}
-          </Button>
-        </Empty>
+        />
       )}
     </>
   );
@@ -530,11 +544,13 @@ function AccountsView({
 function AccountHistory({
   accountId,
   month,
+  onMonthChange,
   accounts,
   categories,
 }: {
   accountId: string;
   month: string;
+  onMonthChange: (month: string) => void;
   accounts: Account[];
   categories: Category[];
 }) {
@@ -542,6 +558,7 @@ function AccountHistory({
   const locale = resolveLocale(useLocale());
   const user = useUser();
   const [edit, setEdit] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const client = useQueryClient();
   const router = useRouter();
@@ -578,177 +595,226 @@ function AccountHistory({
     queryKey: ["history", accountId, month],
     queryFn: () => api<History>(`accounts/${accountId}/history?month=${month}`),
   });
-  if (history.isLoading) return <Loading />;
-  if (!history.data) return <ErrorNotice error={history.error} />;
-  const h = history.data,
-    account = h.account;
+  const h = history.data;
+  const account = h?.account ?? accounts.find((a) => a.id === accountId);
+  if (!account)
+    return history.isLoading ? (
+      <Loading />
+    ) : (
+      <ErrorNotice error={history.error} />
+    );
   const investmentAccount =
     investment.data?.accountId === account.id
       ? account
       : accounts.find((a) => a.id === investment.data?.accountId);
+  const isInvestment = account.type === "INVESTMENT";
+  const showPortfolio = isInvestment && !showHistory;
   return (
     <>
       <div className="section-heading account-history-heading">
-        <div>
-          <Link className="back-link" href="/accounts">
-            {t("common.back")}
-          </Link>
-          <h2>{account.name}</h2>
+        <h1>{account.name}</h1>
+        <IconButton label={t("accounts.edit")} onClick={() => setEdit(true)}>
+          <Pencil size={18} />
+        </IconButton>
+      </div>
+      {isInvestment && (
+        <div
+          className="segmented account-detail-switch"
+          role="group"
+          aria-label={t("accounts.details")}
+        >
+          <button
+            type="button"
+            className={showPortfolio ? "selected" : ""}
+            aria-pressed={showPortfolio}
+            onClick={() => setShowHistory(false)}
+          >
+            {t("investments.portfolio")}
+          </button>
+          <button
+            type="button"
+            className={showHistory ? "selected" : ""}
+            aria-pressed={showHistory}
+            onClick={() => setShowHistory(true)}
+          >
+            {t("accounts.history")}
+          </button>
         </div>
-        <div className="toolbar">
-          <IconButton label={t("accounts.edit")} onClick={() => setEdit(true)}>
-            <Pencil size={18} />
-          </IconButton>
+      )}
+      {showPortfolio ? (
+        <div className="account-portfolio">
+          <InvestmentView accounts={[account]} embedded />
+        </div>
+      ) : (
+        <>
+          <div className="account-current-balance">
+            <span>{t("accounts.currentBalance")}</span>
+            <Money value={account.currentBalance} currency={account.currency} />
+          </div>
           {!account.archivedAt && (
-            <>
+            <div className="toolbar account-history-actions">
               <Button className="secondary" onClick={() => setAdjust(true)}>
-                <Scale size={17} />
+                <Scale size={17} aria-hidden="true" />
                 {t("accounts.updateBalance")}
               </Button>
               <Button onClick={() => setAdd(true)}>
-                <Plus size={17} />
+                <Plus size={17} aria-hidden="true" />
                 {t("transactions.add")}
               </Button>
-            </>
+            </div>
           )}
-        </div>
-      </div>
-      <div className="account-current-balance">
-        <span>{t("accounts.currentBalance")}</span>
-        <Money value={account.currentBalance} currency={account.currency} />
-      </div>
-      <section className="stats-row four">
-        <Stat
-          label={t("accounts.opening")}
-          value={h.opening}
-          currency={account.currency}
-        />
-        <Stat
-          label={t("accounts.closing")}
-          value={h.closing}
-          currency={account.currency}
-        />
-        <Stat
-          label={t("accounts.monthlyIncome")}
-          value={h.income}
-          currency={account.currency}
-          accent="positive"
-        />
-        <Stat
-          label={t("accounts.monthlyExpenses")}
-          value={h.expenses}
-          currency={account.currency}
-        />
-      </section>
-      <section className="section">
-        <h2>{t("accounts.history")}</h2>
-        {h.entries.length ? (
-          <div className="account-history">
-            {h.entries.map((entry) => {
-              const tx = entry.transaction;
-              const standard = "occurredAt" in tx ? tx : undefined;
-              const investmentId = standard
-                ? standard.investmentActivityId
-                : tx.id;
-              const editAccount = standard
-                ? accounts.find((a) => a.id === standard.destinationAccountId)
-                : account;
-              const category =
-                "categoryId" in tx
-                  ? categories.find((c) => c.id === tx.categoryId)
-                  : undefined;
-              return (
-                <article key={entry.id} className="history-row">
-                  <div>
-                    <strong>
-                      {category
-                        ? categoryPath(category, categories, t)
-                        : "isOpeningBalance" in tx && tx.isOpeningBalance
-                          ? t("accounts.initialBalance")
-                          : entry.kind === "STANDARD" && entry.funding
-                            ? t("investments.funding")
-                            : entry.type === "INCOME" ||
-                                entry.type === "EXPENSE"
-                              ? t("transactions.uncategorized")
-                              : t(`types.${entry.type}`)}
-                    </strong>
-                    {"description" in tx && tx.description && (
-                      <span className="transaction-note">{tx.description}</span>
-                    )}
-                    {entry.funding && (
-                      <span>
-                        {entry.funding.sourceAccountName} →{" "}
-                        {entry.funding.destinationAccountName}
-                      </span>
-                    )}
-                    <time dateTime={entry.timestamp}>
-                      {formatDate(entry.timestamp, locale, user.timeZone)} ·{" "}
-                      {formatTime(entry.timestamp, locale, user.timeZone)}
-                    </time>
-                  </div>
-                  <div>
-                    <Money
-                      value={
-                        entry.kind === "INVESTMENT" && entry.funding
-                          ? entry.funding.amount
-                          : entry.delta
-                      }
-                      currency={account.currency}
-                      className={`transaction-amount ${(entry.funding ? "TRANSFER" : entry.type).toLowerCase()}`}
-                    />
-                    <small className="history-balance">
-                      <span className="sr-only">{t("accounts.after")} </span>
-                      <Money
-                        value={entry.balanceAfter}
-                        currency={account.currency}
-                      />
-                    </small>
-                  </div>
-                  <div className="row-actions">
-                    {entry.type !== "ADJUSTMENT" && (
-                      <IconButton
-                        label={t(
-                          investmentId
-                            ? "investments.correct"
-                            : "transactions.correct",
-                        )}
-                        disabled={
-                          !!investmentId &&
-                          (!editAccount || !!editAccount.archivedAt)
-                        }
-                        onClick={() =>
-                          investmentId
-                            ? setInvestmentEdit(investmentId)
-                            : setTransactionEdit(standard)
-                        }
-                      >
-                        <Pencil size={15} />
-                      </IconButton>
-                    )}
-                    <IconButton
-                      label={t(
-                        entry.kind === "INVESTMENT"
-                          ? "investments.void"
-                          : "transactions.void",
-                      )}
-                      onClick={() => {
-                        voidEntry.reset();
-                        setVoiding(entry);
-                      }}
-                    >
-                      <Undo2 size={15} />
-                    </IconButton>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <Empty title={t("accounts.noHistory")} />
-        )}
-      </section>
-      {account.type === "INVESTMENT" && (
-        <InvestmentView accounts={[account]} embedded />
+          <section
+            className="account-history-period"
+            aria-labelledby="account-history-title"
+          >
+            <div className="section-heading">
+              <h2 id="account-history-title">{t("accounts.history")}</h2>
+              <MonthPicker value={month} onChange={onMonthChange} />
+            </div>
+            {h && (
+              <div className="stats-row four">
+                <Stat
+                  label={t("accounts.opening")}
+                  value={h.opening}
+                  currency={account.currency}
+                />
+                <Stat
+                  label={t("accounts.closing")}
+                  value={h.closing}
+                  currency={account.currency}
+                />
+                <Stat
+                  label={t("accounts.monthlyIncome")}
+                  value={h.income}
+                  currency={account.currency}
+                  accent="positive"
+                />
+                <Stat
+                  label={t("accounts.monthlyExpenses")}
+                  value={h.expenses}
+                  currency={account.currency}
+                />
+              </div>
+            )}
+            <div className="section">
+              {history.isLoading ? (
+                <Loading />
+              ) : !h ? (
+                <ErrorNotice error={history.error} />
+              ) : h.entries.length ? (
+                <div className="account-history">
+                  {h.entries.map((entry) => {
+                    const tx = entry.transaction;
+                    const standard = "occurredAt" in tx ? tx : undefined;
+                    const investmentId = standard
+                      ? standard.investmentActivityId
+                      : tx.id;
+                    const editAccount = standard
+                      ? accounts.find(
+                          (a) => a.id === standard.destinationAccountId,
+                        )
+                      : account;
+                    const category =
+                      "categoryId" in tx
+                        ? categories.find((c) => c.id === tx.categoryId)
+                        : undefined;
+                    return (
+                      <article key={entry.id} className="history-row">
+                        <div>
+                          <strong>
+                            {category
+                              ? categoryPath(category, categories, t)
+                              : "isOpeningBalance" in tx && tx.isOpeningBalance
+                                ? t("accounts.initialBalance")
+                                : entry.kind === "STANDARD" && entry.funding
+                                  ? t("investments.funding")
+                                  : entry.type === "INCOME" ||
+                                      entry.type === "EXPENSE"
+                                    ? t("transactions.uncategorized")
+                                    : t(`types.${entry.type}`)}
+                          </strong>
+                          {"description" in tx && tx.description && (
+                            <span className="transaction-note">
+                              {tx.description}
+                            </span>
+                          )}
+                          {entry.funding && (
+                            <span>
+                              {entry.funding.sourceAccountName} →{" "}
+                              {entry.funding.destinationAccountName}
+                            </span>
+                          )}
+                          <time dateTime={entry.timestamp}>
+                            {formatDate(entry.timestamp, locale, user.timeZone)}{" "}
+                            ·{" "}
+                            {formatTime(entry.timestamp, locale, user.timeZone)}
+                          </time>
+                        </div>
+                        <div>
+                          <Money
+                            value={
+                              entry.kind === "INVESTMENT" && entry.funding
+                                ? entry.funding.amount
+                                : entry.delta
+                            }
+                            currency={account.currency}
+                            className={`transaction-amount ${(entry.funding ? "TRANSFER" : entry.type).toLowerCase()}`}
+                          />
+                          <small className="history-balance">
+                            <span className="sr-only">
+                              {t("accounts.after")}{" "}
+                            </span>
+                            <Money
+                              value={entry.balanceAfter}
+                              currency={account.currency}
+                            />
+                          </small>
+                        </div>
+                        <div className="row-actions">
+                          {entry.type !== "ADJUSTMENT" && (
+                            <IconButton
+                              label={t(
+                                investmentId
+                                  ? "investments.correct"
+                                  : "transactions.correct",
+                              )}
+                              disabled={
+                                !!investmentId &&
+                                (!editAccount || !!editAccount.archivedAt)
+                              }
+                              onClick={() =>
+                                investmentId
+                                  ? setInvestmentEdit(investmentId)
+                                  : setTransactionEdit(standard)
+                              }
+                            >
+                              <Pencil size={15} />
+                            </IconButton>
+                          )}
+                          <IconButton
+                            label={t(
+                              entry.kind === "INVESTMENT"
+                                ? "investments.void"
+                                : "transactions.void",
+                            )}
+                            onClick={() => {
+                              voidEntry.reset();
+                              setVoiding(entry);
+                            }}
+                          >
+                            <Undo2 size={15} />
+                          </IconButton>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Empty title={t("accounts.noHistory")} />
+              )}
+            </div>
+          </section>
+        </>
       )}
       <Modal
         title={t("transactions.correct")}
@@ -899,11 +965,16 @@ function TransactionsView({
   categories: Category[];
 }) {
   const t = useTranslations();
+  const filtersId = useId();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [accountId, setAccount] = useState("");
   const [type, setType] = useState("");
   const [categoryId, setCategory] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const activeFilters = [accountId, type, categoryId, from, to].filter(
+    Boolean,
+  ).length;
   const query = queryString({
     month,
     currency,
@@ -919,100 +990,123 @@ function TransactionsView({
   });
   return (
     <>
-      <div className={transactionStyles.filters}>
-        <Field label={t("common.account")}>
-          {(id) => (
-            <Dropdown
-              id={id}
-              value={accountId}
-              onValueChange={(value) => setAccount(value)}
-              aria-label={t("common.account")}
-            >
-              <option value="">{t("common.all")}</option>
-              {accounts
-                .filter((a) => a.currency === currency)
-                .map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-            </Dropdown>
-          )}
-        </Field>
-        <Field label={t("common.type")}>
-          {(id) => (
-            <Dropdown
-              id={id}
-              value={type}
-              onValueChange={(value) => {
-                setType(value);
-                setCategory("");
-              }}
-              aria-label={t("common.type")}
-            >
-              <option value="">{t("common.all")}</option>
-              {ledgerTypes.map((v) => (
-                <option key={v} value={v}>
-                  {t(`types.${v}`)}
-                </option>
-              ))}
-            </Dropdown>
-          )}
-        </Field>
-        <Field label={t("common.category")}>
-          {(id) => (
-            <Dropdown
-              id={id}
-              value={categoryId}
-              onValueChange={(value) => setCategory(value)}
-              aria-label={t("common.category")}
-              disabled={type === "TRANSFER" || type === "ADJUSTMENT"}
-            >
-              <option value="">{t("common.all")}</option>
-              {categories
-                .filter((c) => !type || c.type === type)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {categoryPath(c, categories, t)}
-                  </option>
-                ))}
-            </Dropdown>
-          )}
-        </Field>
-        <Field label={t("common.startDate")}>
-          {(id) => (
-            <input
-              id={id}
-              type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-          )}
-        </Field>
-        <Field label={t("common.endDate")}>
-          {(id) => (
-            <input
-              id={id}
-              type="date"
-              value={to}
-              min={from}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          )}
-        </Field>
-      </div>
-      <ErrorNotice error={transactions.error} />
-      {transactions.isLoading ? (
-        <Loading />
-      ) : (
-        <section className="section">
-          <div className="section-heading">
+      <div className={transactionStyles.filterArea}>
+        <div className={transactionStyles.filterHeading}>
+          {!transactions.isLoading && (
             <h2>
               {t("transactions.count", {
                 count: transactions.data?.length ?? 0,
               })}
             </h2>
-          </div>
+          )}
+          <Button
+            className={`secondary ${transactionStyles.filterToggle}`}
+            aria-expanded={filtersOpen}
+            aria-controls={filtersId}
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <SlidersHorizontal size={17} aria-hidden="true" />
+            {t("common.filters")}
+            {activeFilters > 0 && ` (${activeFilters})`}
+            <ChevronDown
+              className={transactionStyles.filterChevron}
+              size={16}
+              aria-hidden="true"
+            />
+          </Button>
+        </div>
+        <div
+          className={transactionStyles.filters}
+          id={filtersId}
+          data-expanded={filtersOpen}
+        >
+          <Field label={t("common.account")}>
+            {(id) => (
+              <Dropdown
+                id={id}
+                value={accountId}
+                onValueChange={(value) => setAccount(value)}
+                aria-label={t("common.account")}
+              >
+                <option value="">{t("common.all")}</option>
+                {accounts
+                  .filter((a) => a.currency === currency)
+                  .map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+              </Dropdown>
+            )}
+          </Field>
+          <Field label={t("common.type")}>
+            {(id) => (
+              <Dropdown
+                id={id}
+                value={type}
+                onValueChange={(value) => {
+                  setType(value);
+                  setCategory("");
+                }}
+                aria-label={t("common.type")}
+              >
+                <option value="">{t("common.all")}</option>
+                {ledgerTypes.map((v) => (
+                  <option key={v} value={v}>
+                    {t(`types.${v}`)}
+                  </option>
+                ))}
+              </Dropdown>
+            )}
+          </Field>
+          <Field label={t("common.category")}>
+            {(id) => (
+              <Dropdown
+                id={id}
+                value={categoryId}
+                onValueChange={(value) => setCategory(value)}
+                aria-label={t("common.category")}
+                disabled={type === "TRANSFER" || type === "ADJUSTMENT"}
+              >
+                <option value="">{t("common.all")}</option>
+                {categories
+                  .filter((c) => !type || c.type === type)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {categoryPath(c, categories, t)}
+                    </option>
+                  ))}
+              </Dropdown>
+            )}
+          </Field>
+          <Field label={t("common.startDate")}>
+            {(id) => (
+              <input
+                id={id}
+                type="date"
+                value={from}
+                onChange={(e) => setFrom(e.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={t("common.endDate")}>
+            {(id) => (
+              <input
+                id={id}
+                type="date"
+                value={to}
+                min={from}
+                onChange={(e) => setTo(e.target.value)}
+              />
+            )}
+          </Field>
+        </div>
+      </div>
+      <ErrorNotice error={transactions.error} />
+      {transactions.isLoading ? (
+        <Loading />
+      ) : (
+        <section className={`section ${transactionStyles.results}`}>
           <TransactionList
             transactions={transactions.data ?? []}
             accounts={accounts}

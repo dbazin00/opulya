@@ -257,6 +257,7 @@ export const en = {
   accounts: {
     title: "Your accounts",
     subtitle: "Every balance, together.",
+    backToAccounts: "Back to accounts",
     add: "Add account",
     initialBalance: "Opening balance",
     recordInitialBalance: "Record opening balance in transaction history",
@@ -304,7 +305,7 @@ export const en = {
     uncategorized: "Uncategorized",
     selectCategory: "Select category",
     noCategories: "Create a category for this transaction type first.",
-    count: "{count} transactions",
+    count: "{count, plural, one {# transaction} other {# transactions}}",
   },
   categories: {
     title: "Categories",
@@ -435,7 +436,6 @@ export const en = {
     net: "Net cashflow",
     total: "Total",
     drill: "Open subcategories",
-    root: "All categories",
     selectedDay: "Activity on {date}",
   },
   listing: {
@@ -449,6 +449,7 @@ export const en = {
   },
   investments: {
     title: "Investments",
+    portfolio: "Portfolio",
     quoteRefresh:
       "Latest available quotes · refresh every minute while viewing",
     priceAsOf: "Price as of {date}",
@@ -925,6 +926,7 @@ export const hr: typeof en = {
   accounts: {
     title: "Vaši računi",
     subtitle: "Sva stanja, na jednom mjestu.",
+    backToAccounts: "Natrag na račune",
     add: "Dodaj račun",
     initialBalance: "Početno stanje",
     recordInitialBalance: "Zabilježi početno stanje u povijesti transakcija",
@@ -972,7 +974,8 @@ export const hr: typeof en = {
     uncategorized: "Bez kategorije",
     selectCategory: "Odaberite kategoriju",
     noCategories: "Najprije dodajte kategoriju za ovu vrstu transakcije.",
-    count: "{count} transakcija",
+    count:
+      "{count, plural, one {# transakcija} few {# transakcije} other {# transakcija}}",
   },
   categories: {
     title: "Kategorije",
@@ -1104,7 +1107,6 @@ export const hr: typeof en = {
     net: "Neto novčani tok",
     total: "Ukupno",
     drill: "Otvori potkategorije",
-    root: "Sve kategorije",
     selectedDay: "Aktivnosti {date}",
   },
   listing: {
@@ -1118,6 +1120,7 @@ export const hr: typeof en = {
   },
   investments: {
     title: "Ulaganja",
+    portfolio: "Portfelj",
     quoteRefresh:
       "Posljednje dostupne cijene · osvježavanje svake minute tijekom pregleda",
     priceAsOf: "Cijena na dan {date}",

@@ -28,11 +28,13 @@ type Directory = {
 
 export function InstrumentPicker({
   onDone,
-  currency,
+  initialCurrency,
+  fixedCurrency,
   initialType,
 }: {
   onDone: (asset: Asset) => void;
-  currency?: string;
+  initialCurrency?: string;
+  fixedCurrency?: string;
   initialType?: string;
 }) {
   const t = useTranslations();
@@ -47,7 +49,8 @@ export function InstrumentPicker({
       : "",
   );
   const [chosenCurrency, setCurrency] = useState(
-    currencies.find((value) => value === currency) ?? "EUR",
+    currencies.find((value) => value === (fixedCurrency ?? initialCurrency)) ??
+      "EUR",
   );
   const [page, setPage] = useState(0);
   useEffect(() => {
@@ -118,7 +121,7 @@ export function InstrumentPicker({
             <Dropdown
               id={id}
               value={chosenCurrency}
-              disabled={!!currency || save.isPending}
+              disabled={!!fixedCurrency || save.isPending}
               onValueChange={(value) => {
                 setCurrency(value);
                 resetSelection();

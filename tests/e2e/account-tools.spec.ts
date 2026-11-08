@@ -1,4 +1,4 @@
-import { test, expect, chooseOption } from "./fixtures";
+import { test, expect, chooseOption, openTransactionFilters } from "./fixtures";
 import { randomUUID } from "node:crypto";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -101,6 +101,7 @@ test("update account balance and browse every category level", async ({
     fullPage: true,
   });
   await page.goto("/transactions");
+  await openTransactionFilters(page);
   await chooseOption(page.getByLabel("Type", { exact: true }), "ADJUSTMENT");
   await expect(page.locator(".transaction-row")).toHaveCount(2);
   await expect(

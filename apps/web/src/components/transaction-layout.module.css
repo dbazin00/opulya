@@ -1,5 +1,19 @@
+.filterArea {
+  display: flex;
+  flex-direction: column;
+}
+
+.filterHeading h2 {
+  margin-top: 24px;
+}
+
+.filterToggle:global(.button) {
+  display: none;
+}
+
 .filters {
   display: grid;
+  order: -1;
   grid-template-columns: repeat(3, minmax(0, 1fr)) repeat(
       2,
       minmax(150px, 0.85fr)
@@ -8,6 +22,10 @@
   gap: 12px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--line);
+}
+
+.results:global(.section) {
+  padding-top: 12px;
 }
 
 @media (max-width: 1200px) {
@@ -25,6 +43,30 @@
 }
 
 @media (max-width: 800px) {
+  .filterHeading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .filterHeading h2 {
+    margin-top: 0;
+  }
+
+  .filterToggle:global(.button) {
+    display: inline-flex;
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    padding-inline: 10px;
+    border-color: transparent;
+    background: transparent;
+    color: var(--green);
+  }
+
+  .filterToggle[aria-expanded="true"] .filterChevron {
+    transform: rotate(180deg);
+  }
+
   .actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 96px;
@@ -57,8 +99,18 @@
   }
 
   .filters {
+    order: 0;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px 12px;
+    padding-top: 14px;
+  }
+
+  .filters[data-expanded="false"] {
+    display: none;
+  }
+
+  .results:global(.section) {
+    padding-top: 0;
   }
 
   .filters > div,
@@ -68,5 +120,26 @@
 
   .filters > div:nth-child(3) {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 800px) and (prefers-reduced-motion: no-preference) {
+  .filterChevron {
+    transition: transform 160ms ease-out;
+  }
+
+  .filters[data-expanded="true"] {
+    animation: reveal-filters 160ms ease-out;
+  }
+}
+
+@keyframes reveal-filters {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Undo2 } from "lucide-react";
+import { ChevronDown, Pencil, Plus, Undo2 } from "lucide-react";
 import {
   formatDate,
   formatTime,
@@ -99,24 +99,44 @@ export function InvestmentView({
       </Empty>
     );
   const p = value.data;
-  const fetchingPrice = value.isLoading;
   return (
     <>
       <div className="investment-toolbar">
-        <Dropdown
-          value={account.id}
-          onValueChange={(value) => {
-            loadedAccounts.current.delete(value);
-            setChosen(value);
-          }}
-          aria-label={t("investments.selectAccount")}
-        >
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name} ({a.currency})
-            </option>
-          ))}
-        </Dropdown>
+        {!embedded && (
+          <Dropdown
+            value={account.id}
+            onValueChange={(value) => {
+              loadedAccounts.current.delete(value);
+              setChosen(value);
+            }}
+            aria-label={t("investments.selectAccount")}
+          >
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} ({a.currency})
+              </option>
+            ))}
+          </Dropdown>
+        )}
+        {p && (
+          <section className="stats-row investment-account-summary">
+            <Stat
+              label={t("investments.total")}
+              value={p.totalValue}
+              currency={account.currency}
+            />
+            <Stat
+              label={t("investments.cash")}
+              value={p.cashBalance}
+              currency={account.currency}
+            />
+            <Stat
+              label={t("investments.value")}
+              value={p.holdingsValue}
+              currency={account.currency}
+            />
+          </section>
+        )}
         <div className="toolbar">
           <Button className="secondary" onClick={() => setAsset(true)}>
             <Plus size={17} />
@@ -134,37 +154,24 @@ export function InvestmentView({
       ) : (
         p && (
           <>
-            <section className="stats-row investment-stats">
-              <Stat
-                label={t("investments.cash")}
-                value={p.cashBalance}
-                currency={account.currency}
-              />
-              <Stat
-                label={t("investments.value")}
-                value={p.holdingsValue}
-                placeholder={
-                  fetchingPrice ? t("investments.fetchingPrice") : undefined
-                }
-                currency={account.currency}
-              />
-              <Stat
-                label={t("investments.total")}
-                value={p.totalValue}
-                placeholder={
-                  fetchingPrice ? t("investments.fetchingPrice") : undefined
-                }
-                currency={account.currency}
-              />
-            </section>
             {Number(p.cashBalance) < 0 && (
               <p className="notice">{t("investments.negativeCash")}</p>
             )}
-            <p className="valuation-note muted">
-              {t("investments.quoteRefresh")}
-            </p>
             <section className="section">
-              <h2>{t("investments.holdings")}</h2>
+              <div className="section-heading investment-holdings-heading">
+                <h2>{t("investments.holdings")}</h2>
+                {!embedded && (
+                  <a href="#investment-activity">
+                    {t("investments.activity")}
+                    <ChevronDown size={14} aria-hidden="true" />
+                  </a>
+                )}
+              </div>
+              {p.positions.length > 0 && (
+                <p className="valuation-note muted">
+                  {t("investments.quoteRefresh")}
+                </p>
+              )}
               {p.positions.length ? (
                 <div className="holdings">
                   {p.positions.map((position) => {
@@ -174,18 +181,12 @@ export function InvestmentView({
                     const quote = p.quotes.find(
                       (q) => q.assetId === position.assetId,
                     );
-                    const pending = !quote?.quote && value.isLoading;
                     return (
                       <article className="holding" key={position.assetId}>
                         <div className="holding-title">
                           <AssetListing listing={instrument} />
                           <Money
                             value={position.marketValue}
-                            placeholder={
-                              pending
-                                ? t("investments.fetchingPrice")
-                                : undefined
-                            }
                             currency={account.currency}
                           />
                         </div>
@@ -210,11 +211,6 @@ export function InvestmentView({
                               <Money
                                 value={position.currentPrice}
                                 maximumFractionDigits={8}
-                                placeholder={
-                                  pending
-                                    ? t("investments.fetchingPrice")
-                                    : undefined
-                                }
                                 currency={account.currency}
                               />
                             </dd>
@@ -232,11 +228,6 @@ export function InvestmentView({
                             >
                               <Money
                                 value={position.unrealizedGain}
-                                placeholder={
-                                  pending
-                                    ? t("investments.fetchingPrice")
-                                    : undefined
-                                }
                                 currency={account.currency}
                               />
                               {position.returnPercent != null && (
@@ -282,7 +273,6 @@ export function InvestmentView({
                         <QuoteStatus
                           quote={quote?.quote ?? null}
                           error={quote?.error ?? null}
-                          loading={pending}
                         />
                       </article>
                     );
@@ -315,7 +305,10 @@ export function InvestmentView({
         )
       )}
       {!embedded && (
-        <section className="section">
+        <section
+          className="section investment-activity"
+          id="investment-activity"
+        >
           <div className="section-heading">
             <h2>{t("investments.activity")}</h2>
             <MonthPicker value={month} onChange={setMonth} />
@@ -422,7 +415,7 @@ export function InvestmentView({
         {asset && (
           <InstrumentPicker
             onDone={() => setAsset(false)}
-            currency={account.currency}
+            fixedCurrency={account.currency}
           />
         )}
       </Modal>

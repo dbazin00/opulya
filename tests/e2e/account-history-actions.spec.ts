@@ -228,6 +228,19 @@ test("account history edits and voids linked investment funding from either acco
   );
   await deposit("75");
   await page.goto(`/accounts/${portfolio.id}`);
+  await expect(
+    page.getByRole("button", { name: "Portfolio", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("combobox", {
+      name: "Select an investment account",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(history).toBeHidden();
+  await page
+    .getByRole("button", { name: "Account history", exact: true })
+    .click();
   await expect(page.locator(".account-current-balance")).toContainText(
     "€95.00",
   );

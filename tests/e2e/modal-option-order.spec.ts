@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { APIRequestContext, Locator } from "@playwright/test";
-import { test, expect, chooseOption, catalogueFixture } from "./fixtures";
+import {
+  test,
+  expect,
+  chooseOption,
+  catalogueFixture,
+  openTransactionFilters,
+} from "./fixtures";
 
 function api(request: APIRequestContext) {
   return async (path: string, data: unknown) => {
@@ -287,6 +293,7 @@ test("accounts group by type and sort names while filters remain alphabetical", 
     "wallet 10",
   ]);
   await page.goto("/transactions");
+  await openTransactionFilters(page);
   const filter = page.getByRole("combobox", { name: "Account", exact: true });
   await expect.poll(() => optionValues(filter)).toEqual(["", ...eurIds]);
   await chooseOption(filter, zulu.id);

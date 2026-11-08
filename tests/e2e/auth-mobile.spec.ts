@@ -34,25 +34,26 @@ for (const locale of ["en", "hr"] as const) {
       for (const width of [280, 320, 360, 390]) {
         await page.setViewportSize({ width, height: width <= 320 ? 568 : 844 });
         expect(
-          await page.evaluate(
-            () => document.documentElement.scrollWidth <= innerWidth,
-          ),
+          await page.evaluate(() => {
+            const { clientWidth, scrollWidth } = document.documentElement;
+            return scrollWidth <= clientWidth;
+          }),
         ).toBe(true);
         await expect(logo).toBeVisible();
         await expect(brand.locator("span")).toBeVisible();
         const brandBounds = await brand.boundingBox();
         const logoBounds = await logo.boundingBox();
-        const languageBounds = await page
-          .locator(".auth-top button")
+        const themeBounds = await page
+          .locator(".auth-actions .icon-button")
           .boundingBox();
         expect(brandBounds!.height).toBeGreaterThanOrEqual(44);
         expect(logoBounds!.width).toBe(36);
         expect(logoBounds!.height).toBe(36);
         expect(brandBounds!.x + brandBounds!.width).toBeLessThanOrEqual(
-          languageBounds!.x - 8,
+          themeBounds!.x - 8,
         );
         const controls = page.locator(
-          ".auth-brand, .auth-top button, .auth-form h1, .auth-form input, .auth-form .button",
+          ".auth-brand, .auth-top button, .auth-form h1, .auth-form input, .auth-form .button, .auth-footer a",
         );
         for (const control of await controls.all()) {
           const bounds = await control.boundingBox();
